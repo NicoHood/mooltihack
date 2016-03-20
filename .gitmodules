@@ -1,3 +1,9 @@
 [submodule "fonts/fontbuilder"]
 	path = fonts/fontbuilder
 	url = https://github.com/andryblack/fontbuilder.git
+[submodule "bootloader_mini/AVR-Development-Environment-Script"]
+	path = bootloader_mini/AVR-Development-Environment-Script
+	url = https://github.com/NicoHood/AVR-Development-Environment-Script.git
+[submodule "bootloader_mini/dmbs"]
+	path = bootloader_mini/dmbs
+	url = https://github.com/abcminiuser/dmbs.git
