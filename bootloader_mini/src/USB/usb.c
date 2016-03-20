@@ -20,7 +20,6 @@
  */
 #include "usb_descriptors.h"
 #include "timer_manager.h"
-#include "hid_defines.h"
 #include "defines.h"
 #include "usb.h"
 #include <string.h>
