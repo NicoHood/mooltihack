@@ -4,10 +4,10 @@ var mooltipass = mooltipass || {};
 mooltipass.device = mooltipass.device || {};
 
 // Debug mode
-mooltipass.device.debug = false;
+mooltipass.device.debug = true;
 
 // Mooltipass device info
-mooltipass.device.deviceInfo = { 'vendorId': 0x16d0, 'productId': 0x09a0 };
+mooltipass.device.deviceInfo = { 'vendorId': 0x03EB, 'productId': 0x2067 };
 
 // Number of bytes of a packet transferred over USB is fixed to 64
 mooltipass.device.packetSize = 64;
@@ -559,8 +559,26 @@ mooltipass.device.processQueue = function() {
     }
     */
 
-    mooltipass.device._sendMsg(queuedItem);
+    //mooltipass.device._sendMsg(queuedItem);
+    //mooltipass.device.testme();
 };
+
+// mooltipass.device.testme()
+mooltipass.device.testme = function() {
+  console.log('test');
+
+  var bytes = new Uint8Array(2);
+  for (var i = 0;  i < bytes.length; ++i) {
+    bytes[i] = 255;
+  }
+
+  chrome.hid.send(mooltipass.device.connectionId, 0, bytes.buffer, mooltipass.device.cb);
+}
+
+mooltipass.device.cb = function() {
+  console.log('cb');
+}
+
 
 mooltipass.device._sendMsg = function(queuedItem) {
     mooltipass.device.setQueueHash();
