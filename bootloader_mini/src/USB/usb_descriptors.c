@@ -122,7 +122,7 @@ static const usb_string_descriptor_struct_t PROGMEM string0 =
 {
     4,
     3,
-    {0x0409}
+    {0x0409} //TODO internal serial????
 };
 static const usb_string_descriptor_struct_t PROGMEM string1 =
 {

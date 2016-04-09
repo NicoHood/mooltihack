@@ -48,10 +48,10 @@ void initUsb(void)
     USB_FREEZE();                   // enable USB
     PLL_CONFIG();                   // config PLL
     while (!(PLLCSR & (1<<PLOCK))); // wait for PLL lock
-    USB_CONFIG();                   // start USB clock
-    UDCON = 0x00;                   // enable attach resistor
+    USB_CONFIG();                   // start USB clock, unfreeze
+    UDCON = 0x00;                   // enable attach resistor, lufa USB_Device_SetFullSpeed(), USB_Attach()
     usb_configuration = 0;          // usb not configured by default
-    UDIEN = (1<<EORSTE)|(1<<SOFE);  // start USB
+    UDIEN = (1<<EORSTE);  // start USB
 }
 
 /*! \fn     isUsbConfigured(void)
@@ -116,7 +116,6 @@ RET_TYPE usbRawHidRecv(uint8_t *buffer)
 
 /*! \fn     ISR(USB_GEN_vect)
 *   \brief  USB Device Interrupt - handle all device-level events
-*           the transmit buffer flushing is triggered by the start of frame
 */
 ISR(USB_GEN_vect)
 {
@@ -124,7 +123,7 @@ ISR(USB_GEN_vect)
 
     intbits = UDINT;
     UDINT = 0;
-    
+
     // Device reset
     if (intbits & (1<<EORSTI))
     {
@@ -179,6 +178,7 @@ ISR(USB_COM_vect)
 
     UENUM = 0;
     intbits = UEINTX;
+    // LUFA: if (Endpoint_IsSETUPReceived())
     if (intbits & (1<<RXSTPI))
     {
         bmRequestType = UEDATX;
@@ -189,6 +189,8 @@ ISR(USB_COM_vect)
         wIndex |= (UEDATX << 8);
         wLength = UEDATX;
         wLength |= (UEDATX << 8);
+
+        // Endpoint_ClearSETUP(), Endpoint_ClearOUT(), Endpoint_ClearIN(), clear nak IN
         UEINTX = ~((1<<RXSTPI) | (1<<RXOUTI) | (1<<TXINI) | (1 << NAKINI));
 
         if (bRequest == GET_DESCRIPTOR)
@@ -220,6 +222,8 @@ ISR(USB_COM_vect)
                 desc_length = pgm_read_byte(list);
                 break;
             }
+            // TODO len is only 8 bit!
+            // TODO is this len important?
             len = (wLength < 256) ? wLength : 255;
             if (len > desc_length)
             {
@@ -263,6 +267,7 @@ ISR(USB_COM_vect)
             usb_configuration = wValue;
             usb_send_in();
             cfg = endpoint_config_table;
+            // TODO do not init unused endpoints
             for (i=1; i<5; i++)
             {
                 UENUM = i;
@@ -317,8 +322,8 @@ ISR(USB_COM_vect)
                 else
                 {
                     UECONX = (1<<STALLRQC)|(1<<RSTDT)|(1<<EPEN);
-                    UERST = (1 << i);
-                    UERST = 0;
+                    UERST = (1 << i); //Endpoint_ResetEndpoint(EndpointIndex);
+                    UERST = 0; //Endpoint_ResetEndpoint(EndpointIndex);
                 }
                 return;
             }
@@ -369,13 +374,13 @@ ISR(USB_COM_vect)
                 //}
                 //while (len);
                 // Instead we look for the NAIKI flag
-                do 
+                do
                 {
                     if(UEINTX & (1<<RXOUTI))
                     {
                         usb_ack_out();
                     }
-                } 
+                }
                 while (!(UEINTX & (1<<NAKINI)));
                 usb_wait_in_ready();
                 usb_send_in();
@@ -443,7 +448,7 @@ RET_TYPE usbHidSend(uint8_t cmd, const void *buffer, uint8_t buflen)
 {
     uint8_t intr_state;
     int8_t res, rem;
-    
+
     // How many bytes to add to send a full packet
     if (cmd)
     {
@@ -463,7 +468,7 @@ RET_TYPE usbHidSend(uint8_t cmd, const void *buffer, uint8_t buflen)
 
     res = usbWaitFifoReady(&intr_state);
 
-    if (res != RETURN_COM_TRANSF_OK) 
+    if (res != RETURN_COM_TRANSF_OK)
     {
         return res;
     }
@@ -506,7 +511,7 @@ RET_TYPE usbHidSend_P(uint8_t cmd, const void *buffer, uint8_t buflen)
 {
     uint8_t intr_state;
     int8_t res, rem;
-    
+
     // How many bytes to add to send a full packet
     if (cmd)
     {
@@ -591,7 +596,7 @@ RET_TYPE usbSendMessage(uint8_t cmd, uint8_t size, const void *msg)
             return RETURN_COM_TRANSF_OK;
         }
     }
-    
+
     /* Send our only or last packet */
     if (usbHidSend(cmd, msg, size) != RETURN_COM_TRANSF_OK)
     {
@@ -599,7 +604,7 @@ RET_TYPE usbSendMessage(uint8_t cmd, uint8_t size, const void *msg)
     }
     else
     {
-        return RETURN_COM_TRANSF_OK;        
+        return RETURN_COM_TRANSF_OK;
     }
 }
 
@@ -628,7 +633,7 @@ RET_TYPE usbSendMessage_P(uint8_t cmd, uint8_t size, const void *msg)
             return RETURN_COM_TRANSF_OK;
         }
     }
-    
+
     /* Send our only or last packet */
     if (usbHidSend_P(cmd, msg, size) != RETURN_COM_TRANSF_OK)
     {

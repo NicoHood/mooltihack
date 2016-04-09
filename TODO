@@ -1,0 +1,151 @@
+Ideas:
+* Sign the firmware with public/private key signing. (appart from other bootloader secure mechanisms)
+
+* Use Nacl/cryptobox for encryption (aka avrnacl/unacl)
+
+* Make the encryption algorithm selectable
+If someone break AES for example a new firmware could use another algortihm.
+It should be marked somewhere which algorithm was used, to change it afterwards
+
+* Ban a card that was stolen. Aka not every smartcard has the same key.
+what if (the current MP) I lose a smartcard. can i lock only this single card?
+or if i dont trust my mum anymore who has a backup (or girlfriend or whatever)
+it would be possible but it is not implemented
+lets assume i have 3 keys. mum, me and me again. i lose 1 key.
+then i need to send the smartcard to my mum via post again and the old is invalid
+
+* to do this efficient we have to assume the thieve also stole our database backup (not the hardware).
+it would then make sense to add a 3rd key that the card can decrypt, but is not exposed by the hardware.
+we dont assume that the hardware is stolen, because then we have other problems.
+you then can create a new passphrase to unlock this key.
+the database will stay the same, you can update your cards, but the thieve cannot decode the database, even if he has the card.
+he also needs the hardware with the physical key.
+
+* Add additional notes to the password entry. like website and other stuff.
+you can also use this to store (and view) encrypted text files.
+
+* automatic new random passwort genration at variable length and strength.
+
+* Use the device as random number generator device
+ 
+*at90usb1286
+```
+more flash/ram to play with
+more features, more room to play
+usb serial for other ideas
+assymetric crypto
+it also supports 8kb bootloaders
+more pins
+AT90USB1287 supports device AND host (OTG):
+backup data to usb stick
+use keyboard to control device
+make things more complicated
+1286 or 1287? with host or not with host? 6 might be simpler, 7 more flexible
+```
+ 
+ 
+Ok, add: Self-destructing cookies, privacy badger, lighthouse
+Also: Google search link fix
+ 
+
+
+unsolved points:
+license
+crypto implementations/algorithms: sign, encrypt, hash (checksum), hash per page (256b 128 words)
+https://en.wikipedia.org/wiki/Message_authentication_code
+how do we implement POST bootloader checksum if the bk changed?
+if bk changes, also FW checksum changes
+
+TODO what is the difference between rjmp and jmp?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[17:58:45] John A124: Oh, bye btw.
+[17:58:45] John A124: http://abcnews.go.com/US/san-bernardino-iphone-technically-hacked-apple-researchers/story?id=37065676
+[17:58:45] John A124: We reverse engineer integrated circuits, semiconductors, and other hardware to provide a complete security assessment. Our state-of-the-art hardware lab is staffed with experts who decapsulate chips down to the bare die. We use the latest in electron microscopes to determine where a chip might be vulnerable or even compromised.
+[17:58:45] John A124: So you have to count with the fact someone can just decap the chip.
+[17:58:45] John A124: That means (unless already performed) wipe all keys and data blocks from ram flash or other memories after use.
+[17:58:45] John A124: Only way to wipe is to rewrite several time with combination of patterns and random data.
+[17:58:45] John A124: Oh, btw, there is a possible weakening of the crypto due to the random number generator.
+[17:58:45] John A124: If it does not generates numbers random enough. The numbers are then hashes, which gives "random" output, but if one knows the algo for the hash and has a model of the hardware random number generator that does not generate almost random numbers, then he can generate a modeled stream, run it through hash and try. Also one should make sure the random number generator is not affected by different quality of power signatures and quality.
+[17:58:45] John A124: The one used is jitter of WDT inside the chip which gives it some security against tampering. But if a device is physically compromised and modified or affected by targetted RF when a new key is being generated, it could compromise strength of key, unless checks are made for quality of the generator output. 
+[17:58:45] John A124: Also random portion(s)
+[17:58:45] John A124: should be chosen as the stream to form the key, while retaining linear algorithm runtime. Not exactly sure about this.
+[17:58:45] John A124: Also to physical security, even when you wipe all data that was temporarily in use from ram or other places, you have to count on a fact one can obtain all data in encrypted form from flash. So if it would take 50 years on single desktop computer to decrypt single password, not a problem to do that in few hours on a supercomputer.
+[17:58:45] John A124: So one has to at least count for the largest supercomputer and account for moores law (logarithmicaly decreasing the time needed to decrypt every 18 months). Also one lives 100 years possibly. User should have choice of security level if the time to process those passwords would take too long for user comfort (everything above 200ms counts) if that  would still retain at least 50years for a supercomputer with logarithmicaly increasing power.
+[17:58:45] John A124: Also if one wishes to dispose of passwords a complete wipe should be performed of both appropriate data blocks, though ideally whole flash, ram, and also the secure card keys. Then they may be reused or even sold. Other option would be wiping MP, and physically trashing the card chip (milling into dust. also the chip is small compared to the whole card)
+[17:58:45] John A124: If we would be very serious we could develop basically a very secure crypto authentication device. Where security would be limited to the code and physical side, unless special manufacturing. Also might have our code reviewed by industry elite, though that would be after we would be sure there is nothing more we can find or fix ormake better. Because that would cost money.
+[17:58:45] John A124: And not little. But yeah, just a thought.
+[17:58:45] John A124: If it was my I would try to replicate and decrypt the site info on computer with proper keys, after that I would try to make a cracking tool, and time its execution time, try to optimize and either use that time / 2 or industry time if lower, also /2.
+[17:58:45] John A124: Oh and I forgot... if the passwords are not encoded well into the flash, you could recover it by bruteforce.
+[17:58:45] John A124: So theorethically if designed well you could make it impossible to guess if the decrypted string is even a password or not. So you could not bruteforce because you would have absolutely no signature about which one is correct.
+[17:58:45] John A124: So one year crack time on a small supercomputer comparison would make it secure, cause .. well they would have no idea.
+[17:58:45] John A124: Another thing is that you can use two keys. One in standard manner and one as deterministic key enhanced by nonce. In other words that key together with nonce would say how many times to apply (ideally a third) key to the data. The algorithm to not be deterministic by run and power analysis attack would run a fixed ammount of rounds, and would do memory modification same number of rounds, but to a neighboring memory space, and all branches or logic in both cases (real and dummy) decryption/encryption would take exactly same ticks and power signature. So logic would be made by arithmetic or bitmath instead of conditions or jumps. Might increase runtime but would add one more layer that normal person should not go through. 
+[17:58:45] John A124: Additional measure could be (say for some passwords only) a second pin mutated over nonce many times then with encryption many times combined with the resulting decryption key of previous steps (if applicable before, else they would be used after), to give you a special kind of key for only that exact password. ... You could have one special pins for all/some/one site login/other credentials. This would give you both more and more security to crack and analyze through (if ever even possible, lol) and also against spy cameras or people seeing you enter your main PIN.
+[17:58:45] John A124: Talking about PIN, there should be option not to display pin on the display, and switchable during the entering of the pin. That way it shuold also much more prevent people or cameras getting your pin. Also if MP uses two buttons that are on opposite side of the UI, then it should have option to use two next to each other, for this very reason. It is easy to see or record a hand moving left to right. Moving finger up and down a small ammount is much more stealthy and also could be covered by your body. while whole hand mvements could be tracked .
+[17:58:45] John A124: Paranoid, genius or both? You never know.
+[17:58:45] John A124: After some changes, the current 32u4 should be secure enough for normal mortal, even if that is banking shit or whatever websites, or whatever.
+[17:58:45] John A124: Because other attack vectors would be much easier. But if you want to store secure data on a secure hardware using secure password/key and secure means of encryption/decryption and disposal of memory and data, then you might want upgrae to faster device. Say... with AES crypto. Or even ARM (do those have fuses and do they have hardware security even? Not counting special arm solutions for secure applications, unless available to usual person)
+[17:58:45] John A124: Oh yeah, and thinking about venturing into ARM.. never used never tried, never bothered, but if you get 72Mhz, twice the flash and twenty times the ram, well... you would be idiot not to try.
+[17:58:45] John A124: Oh, also DMA, 12bit ADC, many more I/O ports, 16 interrupts, mappable to any pin, 7 timers, 2x spi, i2C, 3x usart (incl irda, modem), can bus, USB2.0, CRC hardware unit.
+[17:58:45] John A124: And for less then Pro Micro.
+[17:58:45] John A124: Damn, I just made myself to buy it, but have to decide which version is better or worthy.
+[17:58:45] John A124: Oh. over one dollar more but double the memory, 128KB. Damn. If you can lock that code inside it like on AVR, you could make a fuckton of stuff at 72Mhz CPU, 64/128KB Flash, 20KB RAM. Oh and 32bits, not 8 :P
+[17:58:45] John A124: What do you think?
+[17:58:45] John A124: Damn, is seems it cannot.
+[17:58:45] John A124: So you would have to ensure physical security, or idk.
+[17:58:45] John A124: But... actually... you have to fingerprint the MP, to know its not modified.
+[17:58:45] John A124: But even after that I think you are able to listen for the card pin if you hook the communications.
+[17:58:45] John A124: Unless the comm with card is encrypted.
+[17:58:45] John A124: But even if you made sure all the electronic components (You cannot know about flash I guess, unless you use a secure flash) and touch IC chip, unless you use your own, and the touch plates itself.
+[17:58:45] John A124: So it all boils down to physical security. If someone tampers with device in a manner that is not seen by user or detected by software on PC or if the software on PC is also spoofed, you are cooked.
+[17:58:45] John A124: This though stards to be paranoid on a level that might not be even good to solve.
+[17:58:45] John A124: But you could create a tiny "key" that you could connect to MP in some way (USB host not practical, unless in HW or you make it in SW), that would use a way to authenticate the MP and display green/red depending on pass/fail. You would have to keep that token always physically secure. That way unless someone gets in and steals the second key used only in the tiny key auth exchange, or the tiny key itself, you are safe. And if the tiny key is done in same secure manner you could verify its integrity on another machine. but that is just adding more auth vectors but the attack surface stays same, but more devices get involved. ... For practical reasons you should discern users by a security level needed for their applications.
+[17:58:45] John A124: In case of secure yet ok solution that would mean optically coupled, RF filtered USB, power isolated, extremely filtered or self sufficient (tiny solar cell plus battery), or combination. ... and fully shielded, the optical channel would have to go through electrically shielded tunnel. ... User input if done capacitively ideally also optically isolated, and powered from the USB, isolated and filtered power, to give no power signature back over usb, and optical channel inside the shielded environment also using shielded tunnel. In case of display, that could be directly coupled to USB, but would have to never display the exact pin digits or passwords. Or would have also to be isolated and filtered.
+[17:58:45] John A124: The inside space of the shielded space should be completely filled with potting compound that is thermally stable and ideally has resistance to heat and cold (disassembly made harder). The shield then itself inlcuding everything except the fibres for optics (and power wires) encased from outside (so no substances affect it). ... Then capacitive touch stuff and the display could be added on top and also encased, including the isolated and filtered power supply blocks. (should also be shielded but with separate shield each, the isolated exchange and the filters at least).
+[17:58:45] John A124: Of course talking about a device that has the "physical key" embedded inside. Else you would have to device secure means of transport of data from card to device. But if during the operation and storage the card is secure and the device during operation, another partially encapsualted shielded fibre channel isolated reader unit or something would be possible, but will skip that.
+[17:58:45] John A124: Now... the power the the core itself, that has no display could be very low. And if utilizing power savings (CPU idle, flash standby or power off, crypto key IDK) it could be really low. Anyway in either case you could make a double isolated and each stage filtered power system.
+[17:58:45] John A124: So isolation unit outside would lead inside unit shield, but into its own "sub" shield, where anoter isolation and filtering stage would be, and final for double ensurement filtering inside the main shield.
+[17:58:45] John A124: Another idea could be using solar energy to harvest power inside the unit itself, so the second stage would be solar, with internal lithium battery to supplement if needed (though you should never need if designed well), and possibly external solar even. Also supercap could be utilized of a compact size. (Got a "friend" who does those). Or LIR (rechargable lithium), to supplement the optical power exchange in some corner cases.
+[17:58:45] John A124: Not sure if I missed anything, like a ground potential or double shielding, or whatever.
+[17:58:45] John A124: But with such device, unless any flaws and the code done well without any flaw, I could possibly trust active nuclear warheads with that maybe.
+[17:58:46] John A124: .... Long text, ins and outs, anals of physical security.
+[17:58:46] John A124: If you would be really serious about it, and I got money as partial funding, I could begin even a practical research. But hence you said, and even did not ten bucks, I consider this as not.
+[17:58:46] John A124: High-performance foundation line, ARM Cortex-M4 core with DSP and FPU, 1 Mbyte Flash, 168 MHz CPU, ART Accelerator, Ethernet, FSMC, HW crypto
+[17:58:46] John A124: Not bad.
+[17:58:46] John A124: Arduino compatible dev board costs less then official Arduino.
+[17:58:46] John A124: I just wonder about power consumption, else fuck it.
+[17:58:46] John A124: Cryptographic acceleration: hardware acceleration for AES 128, 192, 256, Triple DES, HASH (MD5, SHA-1), and HMAC
+True random number generator
+[17:58:46] John A124: Atmel ARM-based embedded MPUs - ARM Cortex-A5 and ARM926EJ-S™ based embedded MPUs are easy to use and ideal for cost-sensitive applications.
+[17:58:46] John A124: (Different ones, but those would be more "familliar" and with secure boot, whatever that means)
+[17:58:46] John A124: Fack it, got the cheaper variant of those cheaper, 64K
+[17:58:46] John A124: At that freq and with that flash and ram should not be worse then Arduino, I hope. Though instrictions take more space? IDK  Even same code better peripherals and faster run would be ok.
+
+
+
+[19:10:03] John A124: I think the guys in 2005 might have done all three things, one or two not knowing about in their design. Problem is most units are bulky. Back then the size was like old LCD 15 ing monitors, without stand, stacked two on each other, but circular.
+[19:14:10] John A124: Anyway the basic idea is, everything we do is against natural harmony, so it generates heat. Less harmony more heat. If you find a way to cross the point of dis-harmony, you will have negative disharmony instead of positive. So instead of dumping unwated energy around, it would suck the energy from around.  And depending on if it is heat or something else, the "around" might theorethically be whole universe proportionally. Which is just theory, but something like RF, instead dumping it like heat only around, RF radiates. ... ALso the Earth is organism so it has its own frequency. An efficient system would likely to be a fraction of that frequency (like antennas are made 1/4 wave etc.)
+[19:16:07] John A124: Anyway the vid is more for watch, then to be "wow, cool, now we will get free energy". Instead of spreading the materials and ideas, he is looking for money. If he waited to go public to not be shut down, he should have already distributed the stuff before going more public. So.. I am more skeptic at him making anything with real impact then the "free" energy itself.
+[19:16:47] John A124: Also thinking I might try to build (inefficient, but safe) nuclear generator, what you think? Might be cool think on resume (joke, would not put that there).
+[19:20:44] John A124: Oh btw there is guy that in 14 build fusion reactor. 
+[19:21:17] John A124: He is smart, learned a lot, and had support!! from family. And they were like "sure" (they thought he will never build it, but he did :D)
+[19:25:00] John A124: Oh btw, if he had permits and money and stuff, he could build a reactor that you could have in your garden. Under ground, so would be safe. Kinda cool idea. Technically not even possible, but pretty simple. But real world is something else. 
+[19:25:36] John A124: The problem is governments and people that lead are senile people. Old people without new ideas. They just want to preserve old system. It is same stuff like communism, just different system.
+[19:27:00] John A124: People from 40 to 60 years should be able to veto, but gov should be 20-40 years. With advisors that are of any age.
+[19:29:18] John A124: https://www.kickstarter.com/projects/nscope/nscope-a-lab-for-every-laptop/description
+[19:31:53] John A124: If you had time, I would have idea for a product/ think to make. But you do not. Oh btw... mbed, and mbed OS might be next big thing. It supports drivers, it is simple scheduler that uses events (including timers), etc. And some manufacturers give you ARM chips and boards that are mbed compatible out of the box. So you write application like for computer, and select the board, and it automatically includes drivers and compiles.

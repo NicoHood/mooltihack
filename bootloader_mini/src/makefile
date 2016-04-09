@@ -13,12 +13,19 @@ ARCH         = AVR8
 F_CPU        = 16000000
 OPTIMIZATION = s
 TARGET       = mooltipass
-SRC          = $(LIBOBJS) $(OBJECTS)
+SRC          = $(LIBOBJS) $(OBJECTS) BootloaderAPITable.S
 CC_FLAGS     = -Werror $(addprefix -I, $(LIBDIRS)) $(addprefix -D, $(DEFINES))
-LD_FLAGS     = -Werror
+LD_FLAGS     = -Werror -Wl,--section-start=.text=$(BOOT_START_OFFSET) $(BOOT_API_LD_FLAGS)
+
+# Flash size and bootloader section sizes of the target, in KB. These must
+# match the target's total FLASH size and the bootloader size set in the
+# device's fuses.
+FLASH_SIZE_KB        := 32
+BOOT_SECTION_SIZE_KB := 4
 
 # Defines
 DEFINES += MOOLTIPASS
+DEFINES += BOOT_START_ADDR=$(BOOT_START_OFFSET)
 
 # Avrdude settings Arduino as ISP
 AVRDUDE_PORT       = /dev/ttyACM0
@@ -33,9 +40,23 @@ LD_FLAGS  += -flto -fuse-linker-plugin
 CC_FLAGS  += -fno-split-wide-types
 CC_FLAGS  += -fno-tree-scev-cprop
 
+# Bootloader address calculation formulas
+# Do not modify these macros, but rather modify the dependent values above.
+CALC_ADDRESS_IN_HEX   = $(shell printf "0x%X" $$(( $(1) )) )
+BOOT_START_OFFSET     = $(call CALC_ADDRESS_IN_HEX, ($(FLASH_SIZE_KB) - $(BOOT_SECTION_SIZE_KB)) * 1024 )
+BOOT_SEC_OFFSET       = $(call CALC_ADDRESS_IN_HEX, ($(FLASH_SIZE_KB) * 1024) - ($(strip $(1))) )
+
+# Bootloader linker section flags for relocating the API table sections to
+# known FLASH addresses - these should not normally be user-edited.
+BOOT_SECTION_LD_FLAG  = -Wl,--section-start=$(strip $(1))=$(call BOOT_SEC_OFFSET, $(3)) -Wl,--undefined=$(strip $(2))
+BOOT_API_LD_FLAGS     = $(call BOOT_SECTION_LD_FLAG, .apitable_trampolines, BootloaderAPI_Trampolines, 96)
+BOOT_API_LD_FLAGS    += $(call BOOT_SECTION_LD_FLAG, .apitable_jumptable,   BootloaderAPI_JumpTable,   32)
+BOOT_API_LD_FLAGS    += $(call BOOT_SECTION_LD_FLAG, .apitable_signatures,  BootloaderAPI_Signatures,  8)
+
+
 # Some helpers to get all the .c and .h files.
 # $(TARGET) is included inside $(OBJECTS).
-LIBDIRS := $(addprefix ./, USB)
+LIBDIRS := $(addprefix ./, USB AES)
 LIBOBJS := $(foreach lib, $(LIBDIRS), $(wildcard $(lib)/*.c))
 OBJECTS := $(wildcard ./*.c)
 
