@@ -43,9 +43,7 @@
  *  \brief  Flash a page of data to the MCU flash
  *  \param  page    Page address in bytes
  *  \param  buf     Pointer to a buffer SPM_PAGESIZE long
- *  \note   If the function needs to be called from the firmware:
- *  \note   typedef void (*boot_program_page_t)(uint16_t page, uint8_t* buf);
- *  \note   const boot_program_page_t boot_program_page = (boot_program_page_t)0x3FC0;
+ *  \note   If the function needs to be called from the firmware use the jump table below.
  */
 static void boot_program_page(uint16_t page, uint8_t* buf) __attribute__ ((section (".spmfunc"), noinline));
 static void boot_program_page(uint16_t page, uint8_t* buf)
@@ -73,6 +71,23 @@ static void boot_program_page(uint16_t page, uint8_t* buf)
     boot_page_write(page);
     boot_spm_busy_wait();
     boot_rww_enable();
+}
+
+/*! \fn     jmptablewrp
+ *  \brief  Small wrapper to call boot_program_page wherever it is located inside the last flash page
+ *  \note   If the function needs to be called from the firmware:
+ *  \note   typedef void (*boot_program_page_t)(uint16_t page, uint8_t* buf);
+ *  \note   const boot_program_page_t boot_program_page = (boot_program_page_t)(FLASHEND-1);
+ */
+static void jmptablewrp(void) __attribute__ ((section (".spmjmptable"), used, noinline, naked));
+static void jmptablewrp(void)
+{
+    asm volatile (
+        ".section .spmjmptable, \"ax\"\n"
+        ".global spmjmptable\n"
+        "spmjmptable:\n"
+        "rjmp boot_program_page\n"
+    );
 }
 
 /*! \fn     sideChannelSafeMemCmp(uint8_t* dataA, uint8_t* dataB, uint8_t size)
