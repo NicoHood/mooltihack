@@ -45,7 +45,7 @@
  *  \param  buf     Pointer to a buffer SPM_PAGESIZE long
  *  \note   If the function needs to be called from the firmware use the jump table below.
  */
-static void boot_program_page(uint16_t page, uint8_t* buf) __attribute__ ((section (".spmfunc"), noinline));
+static void boot_program_page(uint16_t page, uint8_t* buf) __attribute__ ((section (".spmfunc"), used, noinline));
 static void boot_program_page(uint16_t page, uint8_t* buf)
 {
     // Check we are not overwriting this particular routine
