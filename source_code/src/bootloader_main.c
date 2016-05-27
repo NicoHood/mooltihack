@@ -36,7 +36,7 @@
 #include "aes.h"
 #include "spi.h"
 #define start_firmware()        asm volatile ("jmp 0x0000")
-#define MAX_FIRMWARE_SIZE       28672
+#define MAX_FIRMWARE_SIZE       (FLASHEND - 1 + 4096)
 #define SPM_PAGE_SIZE_BYTES_BM  (SPM_PAGESIZE - 1)
 
 
@@ -45,18 +45,17 @@
  *  \param  page    Page address in bytes
  *  \param  buf     Pointer to a buffer SPM_PAGESIZE long
  *  \note   If the function needs to be called from the firmware:
- *  \note   typedef void (*boot_program_page_t)(uint16_t page, uint8_t* buf);
- *  \note   const boot_program_page_t boot_program_page = (boot_program_page_t)0x3FC0;
+ *  \note   typedef bool (*boot_program_page_t)(uint16_t page, uint8_t* buf);
+ *  \note   const boot_program_page_t boot_program_page = (boot_program_page_t)((FLASHEND + 1 - SPM_PAGESIZE) >> 1);
+ *  \return true for error
  */
-static void boot_program_page(uint16_t page, uint8_t* buf)  __attribute__ ((section (".spmfunc"))) __attribute__((noinline));
-static void boot_program_page(uint16_t page, uint8_t* buf)
+static bool boot_program_page(uint16_t page, uint8_t* buf)  __attribute__ ((section (".spmfunc"))) __attribute__((noinline, used));
+static bool boot_program_page(uint16_t page, uint8_t* buf)
 {
-    uint16_t i, w;
-
     // Check we are not overwriting this particular routine
     if ((page >= (FLASHEND - SPM_PAGESIZE + 1)) || ((page & SPM_PAGE_SIZE_BYTES_BM) != 0))
     {
-        return;
+        return true;
     }
 
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
@@ -66,12 +65,12 @@ static void boot_program_page(uint16_t page, uint8_t* buf)
         boot_spm_busy_wait();
 
         // Fill the bootloader temporary page buffer
-        for (i = 0; i < SPM_PAGESIZE; i+=2)
+        uint16_t* words = (uint16_t*)buf;
+        for (uint8_t PageWord = 0; PageWord < (SPM_PAGESIZE / 2); PageWord++)
         {
-            // Set up little-endian word.
-            w = (*buf++) & 0x00FF;
-            w |= (((uint16_t)(*buf++)) << 8) & 0xFF00;
-            boot_page_fill(page + i, w);
+            // Write the next data word to the FLASH page
+            boot_page_fill(page + ((uint16_t)PageWord << 1), *words);
+            words++;
         }
 
         // Store buffer in flash page, wait until the memory is written, re-enable RWW section
@@ -79,6 +78,8 @@ static void boot_program_page(uint16_t page, uint8_t* buf)
         boot_spm_busy_wait();
         boot_rww_enable();
     }
+
+    return false;
 }
 
 /*! \fn     sideChannelSafeMemCmp(uint8_t* dataA, uint8_t* dataB, uint8_t size)
