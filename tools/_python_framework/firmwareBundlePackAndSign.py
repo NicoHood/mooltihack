@@ -128,9 +128,9 @@ def bundlePackAndSign(bundleName, firmwareName, oldAesKey, newAesKey, updateFile
 			break;
 			
 	# Check if we extracted the firmware version and it has the correct length
-	if firmware_version == None or len(firmware_version) != FW_VERSION_LENGTH:
-		print "Problem while extracting firmware version"
-		return False
+	#if firmware_version == None or len(firmware_version) != FW_VERSION_LENGTH:
+	#	print "Problem while extracting firmware version"
+	#	return False
 
 	# If needed, encrypt the new AES key with the old one
 	if aes_key_update_bool == True:
@@ -141,16 +141,16 @@ def bundlePackAndSign(bundleName, firmwareName, oldAesKey, newAesKey, updateFile
 			return False
 	else:
 		enc_password = [0]*AES_KEY_LENGTH
-		
-	# Generate beginning of update file data: bundle | padding | firmware version | new aes key bool | firmware | padding | new aes key encoded
+
+	# Generate beginning of update file data: bundle | padding | firmware | padding | new aes key encoded
 	update_file_data = array('B')
 	update_file_data.extend(bytearray(bundle))
-	update_file_data.extend(array('B',[0]*(STORAGE_SPACE-HASH_LENGH-AES_KEY_LENGTH-FW_MAX_LENGTH-FW_VERSION_LENGTH-AES_KEY_UPDATE_FLAG_LGTH-len(bundle))))
-	update_file_data.extend(firmware_version)
-	if aes_key_update_bool == True:
-		update_file_data.append(255)
-	else:
-		update_file_data.append(0)
+	update_file_data.extend(array('B',[0]*(STORAGE_SPACE-HASH_LENGH-AES_KEY_LENGTH-FW_MAX_LENGTH-len(bundle))))
+	#update_file_data.extend(firmware_version)
+	#if aes_key_update_bool == True:
+	#	update_file_data.append(255)
+	#else:
+	#	update_file_data.append(0)
 	update_file_data.extend(firmware.tobinarray())
 	update_file_data.extend(array('B',[0]*(STORAGE_SPACE-HASH_LENGH-AES_KEY_LENGTH-len(update_file_data))))
 	update_file_data.extend(bytearray(enc_password))
@@ -171,7 +171,10 @@ def bundlePackAndSign(bundleName, firmwareName, oldAesKey, newAesKey, updateFile
 	if len(update_file_data) != STORAGE_SPACE:
 		print "Problem with update file length!"
 		return False
-		
+
+	print "manual cancling!"
+	return False
+
 	# Write our update image file
 	data_fd = open(updateFileName, 'wb')
 	data_fd.write(update_file_data)
