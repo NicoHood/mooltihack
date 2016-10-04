@@ -20,7 +20,7 @@ The Flash Library allows usage of a subset of the Adesto family of SPI flash chi
 To select a chip. Open the flash_mem.h file and change the FLASH_CHIP define.
 
 The library currently implements the following:
-- Initialise the Flash (sets up SPI communications)
+- Initialize the Flash (sets up SPI communications)
 - Send SPI data to the FLASH (R/W)
 - Check the Flash Chip 'Ready' Register
 - Check the Manf. Flash ID
