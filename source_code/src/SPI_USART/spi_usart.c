@@ -17,10 +17,11 @@
  *
  * CDDL HEADER END
  */
+
 /*! \file   spi_usart.c
  *  \brief  USART SPI functions
- *  Copyright [2014] [Darran Hunt]
  */
+
 #include "spi_usart.h"
 #include "spi_usart_private.h"
 

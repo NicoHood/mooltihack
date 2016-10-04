@@ -20,8 +20,9 @@
 
 /*! \file   spi_usart_private.h
  *  \brief  USART SPI functions
- *  Copyright [2014] [Darran Hunt]
  */
+
+// Include Guard
 #pragma once
 
 #include <AppConfig.h>
