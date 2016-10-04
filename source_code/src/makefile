@@ -36,7 +36,7 @@ LD_FLAGS  += -flto -fuse-linker-plugin
 
 # Some helpers to get all the .c and .h files.
 # $(TARGET) is included inside $(OBJECTS).
-LIBDIRS := $(addprefix ./, GUI CARD FLASH USB SPI_USART OLEDMP UTILS NODEMGMT RNG PWM TOUCH LOGIC OLEDMINI MINI)
+LIBDIRS := $(addprefix ./, GUI CARD FLASH USB OLEDMP UTILS NODEMGMT RNG PWM TOUCH LOGIC OLEDMINI MINI)
 LIBOBJS := $(foreach lib, $(LIBDIRS), $(wildcard $(lib)/*.c))
 OBJECTS := $(filter-out ./bootloader_main.c, $(wildcard ./*.c))
 
@@ -98,6 +98,7 @@ DMBS_PATH   ?= ../dmbs/DMBS
 
 # Include library build script makefile and sources
 include AES/AES.mk
+include SPI_USART/SPI_USART.mk
 
 include $(DMBS_PATH)/core.mk
 include $(DMBS_PATH)/gcc.mk
