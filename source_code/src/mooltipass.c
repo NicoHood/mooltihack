@@ -118,7 +118,7 @@ int main(void)
     RET_TYPE flash_init_result;                                                     // Flash initialization result
     RET_TYPE card_detect_ret;                                                       // Card detection result
     uint8_t fuse_ok = TRUE;                                                         // Fuse check result
-    
+
     /********************************************************************/
     /**                     JTAG FUSE ACTIONS                          **/
     /*                                                                  */
@@ -127,7 +127,7 @@ int main(void)
     /* CKDIV8 is also set, which divides the clock by 8.                */
     /********************************************************************/
     #if defined(JTAG_FUSE_ENABLED)                                                  // For units whose fuses haven't been programmed
-        disableJTAG();                                                              // Disable JTAG to gain access to pins        
+        disableJTAG();                                                              // Disable JTAG to gain access to pins
         CPU_PRESCALE(0);                                                            // Set pre-scaler to 1 (fuses not set)
     #endif
 
@@ -171,7 +171,7 @@ int main(void)
             fuse_ok = FALSE;
         }
     #endif
-    
+
     /********************************************************************/
     /**                    ELECTRICAL TESTING                          **/
     /*                                                                  */
@@ -180,7 +180,7 @@ int main(void)
     /********************************************************************/
     #if defined(HARDWARE_OLIVIER_V1) && !defined(POST_KICKSTARTER_UPDATE_SETUP)
         mooltipassStandardElectricalTest(fuse_ok);
-    #endif 
+    #endif
 
     /********************************************************************/
     /**            EEPROM INITIALIZATIONS AT FIRST BOOT                **/
@@ -195,7 +195,7 @@ int main(void)
         /* Set bootloader password bool to FALSE */
         eeprom_write_byte((uint8_t*)EEP_BOOT_PWD_SET, FALSE);
     }
-        
+
     /********************************************************************/
     /**            CHANGE IN MOOLTIPASS SETTINGS STORAGE               **/
     /*                                                                  */
@@ -246,19 +246,19 @@ int main(void)
     if (getMooltipassParameterInEeprom(OFFLINE_MODE_PARAM) == FALSE)
     {
         while(!isUsbConfigured());              // Wait for host to set configuration
-    }    
-    
+    }
+
     /* Set correct timeout_enabled val */
     mp_timeout_enabled = getMooltipassParameterInEeprom(LOCK_TIMEOUT_ENABLE_PARAM);
-    
+
     /** FLASH INITIALIZATION **/
     flash_init_result = checkFlashID();         // Check for flash presence
-    
+
     /** OLED INITIALIZATION **/
     oledBegin(FONT_DEFAULT);                    // Only do it now as we're enumerated
     #ifdef MINI_VERSION
     if (getMooltipassParameterInEeprom(INVERTED_SCREEN_AT_BOOT_PARAM) != FALSE)
-    {        
+    {
         miniOledReverseDisplay();
         wheel_reverse_bool = TRUE;
     }
@@ -270,20 +270,20 @@ int main(void)
         activateTimer(TIMER_REBOOT, 0);
         hasTimerExpired(TIMER_REBOOT, TRUE);
     #endif
-    
+
     /** FIRST BOOT FLASH & EEPROM INITIALIZATIONS **/
     if (current_bootkey_val != CORRECT_BOOTKEY)
-    {        
-        chipErase();                            // Erase everything in flash        
+    {
+        chipErase();                            // Erase everything in flash
         firstTimeUserHandlingInit();            // Erase # of cards and # of users
     }
-    
+
     /** TOUCH PANEL INITIALIZATION **/
     #if defined(HARDWARE_OLIVIER_V1)
         touch_init_result = initTouchSensing();
         activateProxDetection();
     #endif
-    
+
     /** FUNCTIONAL TESTING **/
     //#define FORCE_PROD_TEST
     #if defined(PRODUCTION_SETUP) || defined(PRODUCTION_KICKSTARTER_SETUP) || defined(FORCE_PROD_TEST)
@@ -293,7 +293,7 @@ int main(void)
     #if defined(MINI_VERSION)
         mooltipassMiniFunctionalTest(current_bootkey_val, flash_init_result, fuse_ok, mini_inputs_result);
     #endif
-    
+
     /** BOOT STOP IF ERRORS **/
     #if defined(HARDWARE_OLIVIER_V1)
         #if defined(PRODUCTION_KICKSTARTER_SETUP) || defined(PREPRODUCTION_KICKSTARTER_SETUP) || defined(POST_KICKSTARTER_UPDATE_SETUP)
@@ -312,10 +312,10 @@ int main(void)
             #error "Platform unknown!"
         #endif
     #endif
-    
+
     /* Write inactive buffer by default */
     oledWriteInactiveBuffer();
-    
+
     /* Display tutorial if needed */
     if (getMooltipassParameterInEeprom(TUTORIAL_BOOL_PARAM) != FALSE)
     {
@@ -350,7 +350,7 @@ int main(void)
                         tutorial_bmp_id--;
                         tutorial_scroll_direction = OLED_SCROLL_DOWN;
                     }
-                } 
+                }
                 else
                 {
                     tutorial_bmp_id++;
@@ -364,7 +364,7 @@ int main(void)
     /* Go to startup screen */
     guiSetCurrentScreen(SCREEN_DEFAULT_NINSERTED);
     guiGetBackToCurrentScreen();
-    
+
     /* LED fade-in for standard version & mini v2/3 */
     #if defined(HARDWARE_OLIVIER_V1)
         /* Let's fade in the LEDs */
@@ -380,7 +380,7 @@ int main(void)
     #elif defined(LEDS_ENABLED_MINI)
         miniLedsSetAnimation(ANIM_FADE_IN_FADE_OUT_1_TIME);
     #endif
-    
+
     /* Inhibit touch inputs for the first 2 seconds */
     #if defined(HARDWARE_OLIVIER_V1)
         activateTimer(TIMER_TOUCH_INHIBIT, 2000);
@@ -403,7 +403,7 @@ int main(void)
                 reboot_platform();
             }
         #endif
-        
+
         /* Launch activity detected routine if flag is set */
         if (act_detected_flag != FALSE)
         {
@@ -414,7 +414,7 @@ int main(void)
             activityDetectedRoutine();
             act_detected_flag = FALSE;
         }
-        
+
         #if defined(HARDWARE_OLIVIER_V1)
             /* Call GUI routine once the touch input inhibit timer is finished */
             if (hasTimerExpired(TIMER_TOUCH_INHIBIT, FALSE) == TIMER_EXPIRED)
@@ -424,7 +424,7 @@ int main(void)
         #else
             guiMainLoop();
         #endif
-        
+
         /* If we are running the screen saver */
         if (isScreenSaverOn() == TRUE)
         {
@@ -432,7 +432,7 @@ int main(void)
                 animScreenSaver();
             #endif
         }
-        
+
         /* If the USB bus is in suspend (computer went to sleep), lock device */
         if ((hasTimerExpired(TIMER_USB_SUSPEND, TRUE) == TIMER_EXPIRED) && (getSmartCardInsertedUnlocked() == TRUE))
         {
@@ -450,13 +450,13 @@ int main(void)
             }
             else
             {
-                guiGetBackToCurrentScreen();                
+                guiGetBackToCurrentScreen();
             }
         }
-        
+
         /* Check if a card just got inserted / removed */
         card_detect_ret = isCardPlugged();
-        
+
         /* Do appropriate actions on smartcard insertion / removal */
         if (card_detect_ret == RETURN_JDETECT)
         {
@@ -476,13 +476,13 @@ int main(void)
                 usbSendLockShortcut();
                 mp_lock_unlock_shortcuts = FALSE;
             }
-            
+
             /* Set correct screen */
             guiDisplayInformationOnScreenAndWait(ID_STRING_CARD_REMOVED);
             guiSetCurrentScreen(SCREEN_DEFAULT_NINSERTED);
             guiGetBackToCurrentScreen();
         }
-        
+
         #ifdef TWO_CAPS_TRICK
         /* Two quick caps lock presses wakes up the device */
         if ((hasTimerExpired(TIMER_CAPS, FALSE) == TIMER_EXPIRED) && (getKeyboardLeds() & HID_CAPS_MASK) && (wasCapsLockTimerArmed == FALSE))
@@ -500,10 +500,10 @@ int main(void)
         }
         else if ((hasTimerExpired(TIMER_CAPS, FALSE) == TIMER_EXPIRED) && !(getKeyboardLeds() & HID_CAPS_MASK))
         {
-            wasCapsLockTimerArmed = FALSE;            
+            wasCapsLockTimerArmed = FALSE;
         }
         #endif
-        
+
         /* If we have a timeout lock */
         if ((mp_timeout_enabled == TRUE) && (hasTimerExpired(SLOW_TIMER_LOCKOUT, TRUE) == TIMER_EXPIRED))
         {

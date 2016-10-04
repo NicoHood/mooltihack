@@ -433,7 +433,7 @@ typedef int8_t RET_TYPE;
     #define PORTID_OLED_POW PORTE2
     #define PORT_OLED_POW   PORTE
     #define DDR_OLED_POW    DDRE
-    
+
     // Click wheel
     #ifdef HARDWARE_MINI_CLICK_V1
         #define PORTID_WHEEL_A      PORTC6

@@ -107,7 +107,7 @@ void miniAccelerometerSendReceiveSPIData(uint8_t* data, uint8_t nbBytes)
 *   \return Init success status
 */
 RET_TYPE initMiniInputs(void)
-{    
+{
     // Wheel
     DDR_CLICK &= ~(1 << PORTID_CLICK);
     PORT_CLICK |= (1 << PORTID_CLICK);
@@ -162,7 +162,7 @@ RET_TYPE initMiniInputs(void)
     {
         return RETURN_NOK;
     }
-    
+
     acc_detected = TRUE;
     return RETURN_OK;
 #else
@@ -244,7 +244,7 @@ RET_TYPE scanAndGetDoubleZTap(uint8_t stream_output)
                 miniOledUnReverseDisplay();
                 wheel_reverse_bool = FALSE;
                 setMooltipassParameterInEeprom(INVERTED_SCREEN_AT_BOOT_PARAM, FALSE);
-            } 
+            }
             else if ((acc_y_cumulated < ACC_Y_TOTAL_REVERSE) && (miniOledIsDisplayReversed() == FALSE))
             {
                 miniOledReverseDisplay();
@@ -264,7 +264,7 @@ RET_TYPE scanAndGetDoubleZTap(uint8_t stream_output)
                 {
                     acc_data[9] = 100;
                 }
-            } 
+            }
             else
             {
                 acc_z_tap_detect_enabled = TRUE;
@@ -272,8 +272,8 @@ RET_TYPE scanAndGetDoubleZTap(uint8_t stream_output)
                 {
                     acc_data[9] = 20;
                 }
-            }         
-            
+            }
+
             // Reset vars
             acc_z_added = 0;
             acc_z_avg_counter = 0;
@@ -285,12 +285,12 @@ RET_TYPE scanAndGetDoubleZTap(uint8_t stream_output)
         if (z_data_val > acc_z_average)
         {
             z_cor_data_val = z_data_val - acc_z_average;
-        } 
+        }
         else
         {
             z_cor_data_val = acc_z_average - z_data_val;
         }
-        
+
         // For debug purposes, send the raw value we use for our algo
         if (stream_output != FALSE)
         {
@@ -347,7 +347,7 @@ RET_TYPE scanAndGetDoubleZTap(uint8_t stream_output)
             // Second knock detection timeout
             if (knock_detect_counter++ > ACC_Z_SECOND_KNOCK_MAX_NBS)
             {
-                knock_detect_sm = 0;                
+                knock_detect_sm = 0;
             }
         }
         else if (knock_detect_sm == 2)
@@ -358,7 +358,7 @@ RET_TYPE scanAndGetDoubleZTap(uint8_t stream_output)
                 knock_detect_sm = 0;
             }
         }
-    
+
         if (stream_output != FALSE)
         {
             usbSendMessage(CMD_STREAM_ACC_DATA, 10, acc_data);
@@ -369,7 +369,7 @@ RET_TYPE scanAndGetDoubleZTap(uint8_t stream_output)
     if (acc_z_cum_diff_avg > ACC_Z_MOVEMENT_AVG_SUM_DIFF)
     {
         return ACC_RET_MOVEMENT;
-    } 
+    }
     else
     {
         return ACC_RET_NOTHING;
@@ -381,9 +381,9 @@ RET_TYPE scanAndGetDoubleZTap(uint8_t stream_output)
 *   \brief  Joystick & wheel debounce called by 1ms interrupt
 */
 void scanMiniInputsDetect(void)
-{    
+{
     uint8_t wheel_state, wheel_sm = 0;
-    
+
     // Wheel encoder
     wheel_state = ((PIN_WHEEL_A & (1 << PORTID_WHEEL_A)) >> PORTID_WHEEL_A) | ((PIN_WHEEL_B & (1 << PORTID_WHEEL_B)) >> (PORTID_WHEEL_B-1));
     // Find the state matching the wheel state
@@ -405,7 +405,7 @@ void scanMiniInputsDetect(void)
             if (wheel_reverse_bool != FALSE)
             {
                 wheel_cur_increment++;
-            } 
+            }
             else
             {
                 wheel_cur_increment--;
@@ -432,7 +432,7 @@ void scanMiniInputsDetect(void)
         }
         last_wheel_sm = wheel_sm;
     }
-    
+
     // Wheel click
     if (!(PIN_CLICK & (1 << PORTID_CLICK)))
     {
@@ -471,7 +471,7 @@ void scanMiniInputsDetect(void)
 int8_t getWheelCurrentIncrement(void)
 {
     int8_t return_val = 0;
-    
+
     if (wheel_cur_increment != 0)
     {
         activityDetectedRoutine();
@@ -480,9 +480,9 @@ int8_t getWheelCurrentIncrement(void)
             return_val = wheel_cur_increment;
             wheel_cur_increment = 0;
         }
-        
+
     }
-    
+
     return return_val;
 }
 
@@ -578,13 +578,13 @@ RET_TYPE miniGetWheelAction(uint8_t wait_for_action, uint8_t ignore_incdec)
                     return_val =  WHEEL_ACTION_LONG_CLICK;
                 }
                 else if (wheel_click_return == RETURN_JRELEASED)
-                {                    
+                {
                     if (wheel_cur_increment_copy == 0)
                     {
                         if (discard_release_event != FALSE)
                         {
                             discard_release_event = FALSE;
-                        } 
+                        }
                         else
                         {
                             return_val = WHEEL_ACTION_SHORT_CLICK;
@@ -627,7 +627,7 @@ RET_TYPE miniGetWheelAction(uint8_t wait_for_action, uint8_t ignore_incdec)
                 if (ignore_incdec == FALSE)
                 {
                     wheel_cur_increment = 0;
-                }                
+                }
             }
         }
     }
@@ -638,7 +638,7 @@ RET_TYPE miniGetWheelAction(uint8_t wait_for_action, uint8_t ignore_incdec)
     {
         activityDetectedRoutine();
     }
-    
+
     last_detection_type_ret = return_val;
     return return_val;
 }
