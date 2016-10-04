@@ -19,7 +19,7 @@ Nodes are stored in a stack and heap layout.  All nodes are doubly linked.
 A parent node and child node (child node start of data, or data node) can co-exist on the same memory page.
 
 The Node Management library requires the user to provide allocated space of a handle.  The user should not directly modify this handle.
-The Node Management library also implements support for basic user profiles.  A user profile is used to store the users first parent node (credential) and is used to allow a user to store 'favourite' credentials.  There are a maximum of 16 favourites allowed and a total of 16 possible users.
+The Node Management library also implements support for basic user profiles.  A user profile is used to store the users first parent node (credential) and is used to allow a user to store 'favourite' credentials.  There are a maximum of 14 favourites allowed and a total of 16 possible users.
 
 ## Node Details
 ### Parent Node
@@ -28,19 +28,19 @@ Used to store the base 'service' of a credential.
 - nextChildAddress (Node Address of the parents first child)
 - prevParentAddress (Used to implement the linked list)
 - nextParentAddress (Used to implement the linked list)
-- service[58] (Used to indicate the 'service' of the credential ex 'hackaday.io')
+- service 58B (Used to indicate the 'service' of the credential e.g. 'hackaday.io')
 
 ### Child Node
 Used to store the user name and password of a credential
-flags (used internally to indicate validity and type of the node)
-prevChildAddress (Used to implement the linked list)
-nextChildAddress (Used to implement the linked list)
-description[24] (Plain-text description of the credential)
-dateCreated (Date the credential was first added to the Mooltipass. plug-in required)
-dateLastUsed (Date the credential was last used. plug-in required)
-ctr[3] (Used for encryption)
-login[63] (Plain-text user name)
-password[32] (encrypted password)
+ - flags (used internally to indicate validity and type of the node)
+ - prevChildAddress (Used to implement the linked list)
+ - nextChildAddress (Used to implement the linked list)
+ - description 24B (Plain-text description of the credential)
+ - dateCreated (Date the credential was first added to the Mooltipass. plug-in required)
+ - dateLastUsed (Date the credential was last used. plug-in required)
+ - ctr 3B (Used for encryption)
+ - login 63B (Plain-text user name)
+ - password 32B (encrypted password)
 
 ### Child start of data Node
 More later

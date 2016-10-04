@@ -37,8 +37,10 @@
 #include "aes256_ctr.h"
 #include "node_mgmt.h"
 #include "flash_mem.h"
+#include "oledmini.h"
 #include "defines.h"
 #include "delays.h"
+#include "utils.h"
 #include "usb.h"
 #include "rng.h"
 
@@ -52,6 +54,8 @@ uint16_t selected_login_child_node_addr;
 volatile uint8_t selected_login_flag = FALSE;
 // Context valid flag (service / website selected)
 volatile uint8_t context_valid_flag = FALSE;
+// Login just added flag
+volatile uint8_t login_just_added_flag = FALSE;
 // Data context valid flag (we know the current data service)
 uint8_t data_context_valid_flag = FALSE;
 // Currently adding data flag
@@ -65,7 +69,7 @@ uint8_t currently_writing_first_block = FALSE;
 // Address of the next data node for reading
 uint16_t next_data_node_addr = 0;
 // Current CTR value used for data node decryption
-uint8_t dataNodeCtrVal[3];
+uint8_t dataNodeCtrVal[USER_CTR_SIZE];
 // Next CTR value for our AES encryption
 uint8_t nextCtrVal[USER_CTR_SIZE];
 // Current context parent node address
@@ -113,6 +117,7 @@ void clearSmartCardInsertedUnlocked(void)
 {
     context_valid_flag = FALSE;
     selected_login_flag = FALSE;
+    login_just_added_flag = FALSE;
     leaveMemoryManagementMode();
     activateTimer(TIMER_CREDENTIALS, 0);
     smartcard_inserted_unlocked = FALSE;
@@ -295,6 +300,50 @@ static inline void ctrPostEncryptionTasks(void)
     aesIncrementCtr(nextCtrVal, USER_CTR_SIZE);
 }
 
+/*! \fn     computeAndDisplayBlockSizeEncryptionResult(uint8_t* aes_key, uint8_t* data, uint8_t stringId)
+*   \brief  Encrypt a block of data using a given aes key, display it on the screen and wait for user action
+*   \param  aes_key     AES key
+*   \param  data        Data to encrypt, one AES block size long (128bits) untouched by the routine
+*   \param  stringId    String ID to display on the screen
+*   \note   aes_key is emptied after use!
+*   \note   This function uses the AES context of the current user, so DO NOT call it when a user is logged in!
+*/
+#ifdef MINI_VERSION
+void computeAndDisplayBlockSizeEncryptionResult(uint8_t* aes_key, uint8_t* data, uint8_t stringId)
+{
+    // Buffer to store a copy of the data to encrypt
+    uint8_t data_copy[AES_BLOCK_SIZE/8];
+
+    // Get the text to display on the screen
+    miniOledClearFrameBuffer();
+    miniOledPutCenteredString(THREE_LINE_TEXT_FIRST_POS, readStoredStringToBuffer(stringId));
+
+    // Initialize AES context & encrypt data
+    activateTimer(TIMER_CREDENTIALS, AES_ENCR_DECR_TIMER_VAL);
+    memcpy((void*)data_copy, (void*)data, AES256_CTR_LENGTH);
+    aes256_init_ecb(&(aesctx.aesCtx), aes_key);
+    aes256_encrypt_ecb(&(aesctx.aesCtx), data_copy);
+    while (hasTimerExpired(TIMER_CREDENTIALS, FALSE) == TIMER_RUNNING);
+
+    // Format and display hash
+    for (uint8_t i = 0; i < AES256_CTR_LENGTH / 2; i++)
+    {
+        hexachar_to_string((char)data_copy[i], (char*)&textBuffer1[i*2]);
+        hexachar_to_string((char)data_copy[i+(AES_BLOCK_SIZE/8/2)], (char*)&textBuffer2[i*2]);
+    }
+    miniOledPutCenteredString(THREE_LINE_TEXT_SECOND_POS, (char*)textBuffer1);
+    miniOledPutCenteredString(THREE_LINE_TEXT_THIRD_POS, (char*)textBuffer2);
+    miniOledFlushEntireBufferToDisplay();
+
+    // Delete vars
+    memset((void*)&aesctx, 0x00, sizeof(aesctx));
+    memset((void*)aes_key, 0x00, AES_KEY_LENGTH/8);
+
+    // Wait for action before next screen
+    miniGetWheelAction(TRUE, FALSE);
+}
+#endif
+
 /*! \fn     decrypt32bBlockOfDataAndClearCTVFlag(uint8_t* data, uint8_t* ctr)
 *   \brief  Decrypt a block of data, clear credential_timer_valid
 *   \param  data    Data to be decrypted
@@ -358,6 +407,7 @@ RET_TYPE setCurrentContext(uint8_t* name, uint8_t type)
     {
         context_valid_flag = FALSE;
         selected_login_flag = FALSE;
+        login_just_added_flag = FALSE;
         data_context_valid_flag = FALSE;
         current_adding_data_flag = FALSE;
         activateTimer(TIMER_CREDENTIALS, 0);
@@ -648,10 +698,9 @@ RET_TYPE setLoginForContext(uint8_t* name, uint8_t length)
                 // Display processing screen
                 guiDisplayProcessingScreen();
                 
-                // Set temp cnode to zeroes, generate random password, store the node in flash
+                // Set temp cnode to zeroes: we're not setting a random password as a plain text attack would suggest the attacker having control on the device
+                // So instead of not setting a password, he'd just put a 31 known plaintext...
                 memset((void*)&temp_cnode, 0x00, NODE_SIZE);
-                fillArrayWithRandomBytes(temp_cnode.password, NODE_CHILD_SIZE_OF_PASSWORD - 1);
-                temp_cnode.password[NODE_CHILD_SIZE_OF_PASSWORD-1] = 0;
                 encrypt32bBlockOfDataAndClearCTVFlag(temp_cnode.password, temp_cnode.ctr);
                 memcpy((void*)temp_cnode.login, (void*)name, length);
                 
@@ -662,6 +711,7 @@ RET_TYPE setLoginForContext(uint8_t* name, uint8_t length)
                 if(createChildNode(context_parent_node_addr, &temp_cnode) == RETURN_OK)
                 {
                     selected_login_child_node_addr = searchForLoginInGivenParent(context_parent_node_addr, name);
+                    login_just_added_flag = TRUE;
                     selected_login_flag = TRUE;
                     ret_val = RETURN_OK;
                 }
@@ -681,13 +731,13 @@ RET_TYPE setLoginForContext(uint8_t* name, uint8_t length)
     return ret_val;
 }
 
-/*! \fn     setPasswordForContext(uint8_t* password, uint8_t length)
-*   \brief  Set password for current context
-*   \param  password    String containing the password
+/*! \fn     setDescriptionForContext(uint8_t* description)
+*   \brief  Set description for current context
+*   \param  description String containing the description
 *   \param  length      String length
 *   \return Operation success or not
 */
-RET_TYPE setPasswordForContext(uint8_t* password, uint8_t length)
+RET_TYPE setDescriptionForContext(uint8_t* description)
 {
     if ((selected_login_flag == FALSE) || (context_valid_flag == FALSE))
     {
@@ -698,13 +748,73 @@ RET_TYPE setPasswordForContext(uint8_t* password, uint8_t length)
     {
         // Read parent node
         readParentNode(&temp_pnode, context_parent_node_addr);
-        
+
+        // Read child node
+        readChildNode(&temp_cnode, selected_login_child_node_addr);
+
+        // If we haven't just added the login, ask for permission
+        if (login_just_added_flag == FALSE)
+        {
+            // Prepare password changing approval text
+            #if defined(HARDWARE_OLIVIER_V1)
+                conf_text.lines[0] = readStoredStringToBuffer(ID_STRING_CHANGE_DESC_FOR);
+                conf_text.lines[1] = (char*)temp_cnode.login;
+                conf_text.lines[2] = readStoredStringToBuffer(ID_STRING_ON);
+                conf_text.lines[3] = (char*)temp_pnode.service;
+            #elif defined(MINI_VERSION)
+                conf_text.lines[0] = (char*)temp_pnode.service;
+                conf_text.lines[1] = readStoredStringToBuffer(ID_STRING_CHANGE_DESC_FOR);
+                conf_text.lines[2] = (char*)temp_cnode.login;
+            #endif
+
+            // Ask for password changing approval
+            #if defined(HARDWARE_OLIVIER_V1)
+            if (guiAskForConfirmation(4, &conf_text) != RETURN_OK)
+            #elif defined(MINI_VERSION)
+            if (guiAskForConfirmation(3, &conf_text) != RETURN_OK)
+            #endif
+            {
+                guiGetBackToCurrentScreen();
+                return RETURN_NOK;
+            }
+
+            guiGetBackToCurrentScreen();
+        }
+
+        // Update the description field
+        updateChildNodeDescription(&temp_cnode, selected_login_child_node_addr, description);
+        login_just_added_flag = FALSE;
+
+        return RETURN_OK;
+    }
+}
+
+/*! \fn     setPasswordForContext(uint8_t* password, uint8_t length)
+*   \brief  Set password for current context
+*   \param  password    String containing the password
+*   \param  length      String length
+*   \return Operation success or not
+*/
+RET_TYPE setPasswordForContext(uint8_t* password, uint8_t length)
+{
+    // Temp CTR value
+    uint8_t temp_ctr[3];
+
+    if ((selected_login_flag == FALSE) || (context_valid_flag == FALSE))
+    {
+        // Login not set
+        return RETURN_NOK;
+    }
+    else
+    {
+        // Read parent node
+        readParentNode(&temp_pnode, context_parent_node_addr);
+
         // Read child node
         readChildNode(&temp_cnode, selected_login_child_node_addr);
         
-        // Copy the password and put random bytes after the final 0
-        memcpy((void*)temp_cnode.password, (void*)password, length);
-        fillArrayWithRandomBytes(temp_cnode.password + length, NODE_CHILD_SIZE_OF_PASSWORD - length);
+        // Put random bytes after the final 0
+        fillArrayWithRandomBytes(password + length, NODE_CHILD_SIZE_OF_PASSWORD - length);
         
         // Prepare password changing approval text
         #if defined(HARDWARE_OLIVIER_V1)
@@ -737,10 +847,10 @@ RET_TYPE setPasswordForContext(uint8_t* password, uint8_t length)
             #endif
 
             // Encrypt the password
-            encrypt32bBlockOfDataAndClearCTVFlag(temp_cnode.password, temp_cnode.ctr);
+            encrypt32bBlockOfDataAndClearCTVFlag(password, temp_ctr);
             
             // Update child node to store password
-            if (updateChildNode(&temp_pnode, &temp_cnode, context_parent_node_addr, selected_login_child_node_addr) != RETURN_OK)
+            if(updateChildNodePassword(&temp_cnode, selected_login_child_node_addr, password, temp_ctr) != RETURN_OK)
             {
                 return RETURN_NOK;
             }
@@ -1688,7 +1798,8 @@ void loginManagementSelectLogic(void)
                     /* ask twice for confirmation */
                     if((guiAskForConfirmation(1, (confirmationText_t*)readStoredStringToBuffer(ID_STRING_MGMT_DELETE_CREDSQ)) == RETURN_OK) && (guiAskForConfirmation(1, (confirmationText_t*)readStoredStringToBuffer(ID_STRING_MGMT_AREYOUSUREQ)) == RETURN_OK))
                     {
-                        deleteChildNode(chosen_service_addr, chosen_login_addr);
+                        cNode buf_cnode;
+                        deleteChildNode(chosen_service_addr, chosen_login_addr, &buf_cnode);
                     }
                     break;
                 default:

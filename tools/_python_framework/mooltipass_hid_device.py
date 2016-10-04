@@ -191,6 +191,92 @@ class mooltipass_hid_device:
 			received_data = self.device.receiveHidPacket()
 			print "Packet #" + str(i) + " in hex: " + ' '.join(hex(x) for x in received_data)
 			
+	# Get number of free slots for new users
+	def getFreeUserSlots(self):
+		self.device.sendHidPacket([0, CMD_GET_FREE_NB_USR_SLT])
+		print self.device.receiveHidPacket()[DATA_INDEX], "slots for new users available"
+		
+	# Change description for given login
+	def changeLoginDescription(self):
+		context = raw_input("Context: ")
+		login = raw_input("Login: ")
+		desc = raw_input("Description: ")
+		
+		self.device.sendHidPacket(self.getPacketForCommand(CMD_CONTEXT, len(context)+1, self.textToByteArray(context)))
+		if self.device.receiveHidPacket()[DATA_INDEX] == 0x00:
+			print "Couldn't set context"
+			return
+		
+		self.device.sendHidPacket(self.getPacketForCommand(CMD_SET_LOGIN, len(login)+1, self.textToByteArray(login)))
+		if self.device.receiveHidPacket()[DATA_INDEX] == 0x00:
+			print "Couldn't set login"
+			return
+		
+		self.device.sendHidPacket(self.getPacketForCommand(CMD_SET_DESCRIPTION, len(desc)+1, self.textToByteArray(desc)))
+		if self.device.receiveHidPacket()[DATA_INDEX] == 0x00:
+			print "Couldn't set description"
+			return
+		
+		print "Description changed!"
+		
+	# Add new credential
+	def addCredential(self):
+		context = raw_input("Context: ")
+		login = raw_input("Login: ")
+		desc = raw_input("Description: ")
+		password = raw_input("Password: ")
+				
+		self.device.sendHidPacket(self.getPacketForCommand(CMD_ADD_CONTEXT, len(context)+1, self.textToByteArray(context)))
+		if self.device.receiveHidPacket()[DATA_INDEX] == 0x00:
+			print "Couldn't set context"
+			return
+			
+		self.device.sendHidPacket(self.getPacketForCommand(CMD_CONTEXT, len(context)+1, self.textToByteArray(context)))
+		if self.device.receiveHidPacket()[DATA_INDEX] == 0x00:
+			print "Couldn't set context"
+			return
+		
+		self.device.sendHidPacket(self.getPacketForCommand(CMD_SET_LOGIN, len(login)+1, self.textToByteArray(login)))
+		if self.device.receiveHidPacket()[DATA_INDEX] == 0x00:
+			print "Couldn't set login"
+			return
+		
+		self.device.sendHidPacket(self.getPacketForCommand(CMD_SET_DESCRIPTION, len(desc)+1, self.textToByteArray(desc)))
+		if self.device.receiveHidPacket()[DATA_INDEX] == 0x00:
+			print "Couldn't set description"
+			return
+		
+		self.device.sendHidPacket(self.getPacketForCommand(CMD_SET_PASSWORD, len(password)+1, self.textToByteArray(password)))
+		if self.device.receiveHidPacket()[DATA_INDEX] == 0x00:
+			print "Couldn't set password"
+			return			
+		
+		print "Done!"
+		
+	# Test please retry MPM feature
+	def testPleaseRetry(self):
+		context = raw_input("Context: ")
+			
+		self.device.sendHidPacket(self.getPacketForCommand(CMD_CONTEXT, len(context)+1, self.textToByteArray(context)))
+		if self.device.receiveHidPacket()[DATA_INDEX] == 0x00:
+			print "Couldn't set context"
+			return
+		
+		self.device.sendHidPacket(self.getPacketForCommand(CMD_GET_LOGIN, 0, None))
+		print "Don't touch the device!"		
+		
+		self.device.sendHidPacket(self.getPacketForCommand(CMD_GET_LOGIN, 0, None))
+		data = self.device.receiveHidPacket()
+		if data[CMD_INDEX] == CMD_PLEASE_RETRY:
+			print "Please retry received!"
+			
+			self.device.sendHidPacket(self.getPacketForCommand(CMD_CANCEL_REQUEST, 0, None))
+			print "Cancel request sent!"
+			data = self.device.receiveHidPacket()			
+		else:
+			print "Didn't receive please retry!"
+			print "Received data:", ' '.join(hex(x) for x in data)
+			
 	# Upload bundle
 	def	uploadBundle(self, password, filename, verbose):	
 		password_set = False

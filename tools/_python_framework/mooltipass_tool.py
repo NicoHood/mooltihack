@@ -128,7 +128,10 @@ def main():
 				print "init: not enough args!"
 				
 		if sys.argv[1] == "decrypt_mini_prod":
-			decryptMiniProdFile()		
+			if len(sys.argv) > 2:
+				decryptMiniProdFile(sys.argv[2])		
+			else:
+				print "decrypt_mini_prod: not enough args!"
 				
 		if sys.argv[1] == "read_user_db_change_nb":
 			mooltipass_device.getMooltipassUserDbChangeNumber()		
@@ -138,6 +141,19 @@ def main():
 				mooltipass_device.setMooltipassUserDbChangeNumber(int(sys.argv[2]))		
 			else:
 				print "set_user_db_change_nb: not enough args!"
+				
+		if sys.argv[1] == "get_free_user_slots":
+			mooltipass_device.getFreeUserSlots()
+			
+		if sys.argv[1] == "change_login_description":
+			mooltipass_device.changeLoginDescription()
+			
+		if sys.argv[1] == "add_credential":
+			mooltipass_device.addCredential()
+			
+		if sys.argv[1] == "test_please_retry":
+			mooltipass_device.testPleaseRetry()
+		
 		
 	#mooltipass_device.sendCustomPacket()
 	#mooltipass_device.checkSecuritySettings()

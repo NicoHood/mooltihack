@@ -72,6 +72,7 @@
 #define MINI_KNOCK_DETECT_ENABLE_PARAM      28
 #define MINI_KNOCK_THRES_PARAM              29
 #define LOCK_UNLOCK_FEATURE_PARAM           30
+#define HASH_DISPLAY_FEATURE_PARAM          31
 // ... we can go until 33 ;)
 #define FIRST_USER_PARAM                    KEYBOARD_LAYOUT_PARAM
 
@@ -79,6 +80,7 @@
 RET_TYPE getUserIdFromSmartCardCPZ(uint8_t* buffer, uint8_t* nonce, uint8_t* userid);
 RET_TYPE writeSmartCardCPZForUserId(uint8_t* buffer, uint8_t* nonce, uint8_t userid);
 uint8_t controlEepromParameter(uint8_t val, uint8_t lowerBound, uint8_t upperBound);
+RET_TYPE findAvailableUserId(uint8_t* userid, uint8_t* nb_users_free);
 RET_TYPE addNewUserForExistingCard(uint8_t* nonce, uint8_t* user_id);
 void setMooltipassParameterInEeprom(uint8_t param, uint8_t val);
 RET_TYPE addNewUserAndNewSmartCard(volatile uint16_t* pin_code);

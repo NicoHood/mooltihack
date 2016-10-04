@@ -222,10 +222,6 @@ typedef struct __attribute__((packed)) nodeMgmtH
     uint16_t lastParentNode;        /*!< The address of the users last parent node (read from flash. eg cache) */
     uint16_t nextFreeNode;          /*!< The address of the next free node */
     gNode tempgNode;                /*!< A generic node to be used as a buffer */
-    union {
-        cNode child;
-        dNode data;
-    } child;                        /*!< A child, child start of data, or child data node to be used as a buffer in the API */
     uint16_t servicesLut[26];       /*!<Look up table for our services */
 } mgmtHandle;
 
@@ -308,7 +304,7 @@ uint16_t getStartingDataParentAddress(void);
 uint16_t getStartingParentAddress(void);
 uint16_t getLastParentAddress(void);
 
-void getPreviousNextFirstLetterForGivenLetter(char c, char* array);
+void getPreviousNextFirstLetterForGivenLetter(char c, char* array, uint16_t* parent_addresses);
 uint16_t getParentNodeForLetter(uint8_t letter);
 void populateServicesLut(void);
 
@@ -333,11 +329,13 @@ RET_TYPE createChildNode(uint16_t pAddr, cNode *c);
 RET_TYPE createChildStartOfDataNode(uint16_t pAddr, cNode *c, uint8_t dataNodeCount);
 void readChildNode(cNode *c, uint16_t childNodeAddress);
 RET_TYPE updateChildNode(pNode *p, cNode *c, uint16_t pAddr, uint16_t cAddr);
-RET_TYPE deleteChildNode(uint16_t pAddr, uint16_t cAddr);
+RET_TYPE deleteChildNode(uint16_t pAddr, uint16_t cAddr, cNode *ic);
 
 void readNode(gNode* g, uint16_t nodeAddress);
 
 uint8_t findFreeNodes(uint8_t nbNodes, uint16_t* nodeArray, uint16_t startPage, uint8_t startNode);
+RET_TYPE updateChildNodePassword(cNode* c, uint16_t cAddr, uint8_t* password, uint8_t* ctr_value);
+RET_TYPE updateChildNodeDescription(cNode* c, uint16_t cAddr, uint8_t* description);
 void setProfileUserDbChangeNumber(void *buf);
 void readProfileUserDbChangeNumber(void *buf);
 void scanNodeUsage(void);

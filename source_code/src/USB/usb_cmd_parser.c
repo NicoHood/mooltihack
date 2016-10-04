@@ -63,6 +63,10 @@ uint16_t currentNodeWritten = NODE_ADDR_NULL;
 uint16_t mediaFlashImportPage;
 // Media flash import temp offset
 uint16_t mediaFlashImportOffset;
+/* External var, addr of bottom of stack (usually located at end of RAM)*/
+extern uint8_t __stack;
+/* External var, end of known static RAM (to be filled by linker) */
+extern uint8_t _end;
 
 /*! \fn     checkMooltipassPassword(uint8_t* data)
 *   \brief  Check that the provided bytes is the mooltipass password
@@ -161,7 +165,7 @@ RET_TYPE usbCancelRequestReceived(void)
     uint8_t incomingData[RAWHID_TX_SIZE];
 
     // Read usb comms as the plugin could ask to cancel the request
-    if ((getMooltipassParameterInEeprom(USER_REQ_CANCEL_PARAM) != FALSE) && (usbRawHidRecv(incomingData) == RETURN_COM_TRANSF_OK))
+    if (usbRawHidRecv(incomingData) == RETURN_COM_TRANSF_OK)
     {
         if (incomingData[HID_TYPE_FIELD] == CMD_CANCEL_REQUEST)
         {
@@ -264,6 +268,10 @@ void usbProcessIncoming(uint8_t caller_id)
     else if (datacmd == CMD_SET_CARD_PASS)
     {
         max_text_size = SMARTCARD_MTP_PASS_LENGTH/8;
+    }
+    else if (datacmd == CMD_SET_DESCRIPTION)
+    {
+        max_text_size = NODE_CHILD_SIZE_OF_DESCRIPTION;
     }
     else
     {
@@ -431,6 +439,20 @@ void usbProcessIncoming(uint8_t caller_id)
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
                 USBPARSERDEBUGPRINTF_P(PSTR("set login: \"%s\" failed\n"),msg->body.data);
+            }
+            break;
+        }
+
+        // set description
+        case CMD_SET_DESCRIPTION :
+        {
+            if (setDescriptionForContext(msg->body.data) == RETURN_OK)
+            {
+                plugin_return_value = PLUGIN_BYTE_OK;
+            }
+            else
+            {
+                plugin_return_value = PLUGIN_BYTE_ERROR;
             }
             break;
         }
@@ -913,13 +935,12 @@ void usbProcessIncoming(uint8_t caller_id)
 
             // Things are different between the mini & the standard Mooltipass
             #if defined(MINI_VERSION)
-                #define DELIBERATE_BUNDLE_PASSWORD_CHECK_SKIP
-                #if defined(MINI_CLICK_BETATESTERS_SETUP) || defined(MINI_CREDENTIAL_MANAGEMENT) || defined(DELIBERATE_BUNDLE_PASSWORD_CHECK_SKIP)
+                #if defined(MINI_CLICK_BETATESTERS_SETUP) || defined(MINI_CREDENTIAL_MANAGEMENT) || defined(MINI_PREPRODUCTION_SETUP_ACC)
                     /* For the versions that use the AVR bootloader, or when deliberately skipping it: no prompts, just accept it */
                     plugin_return_value = PLUGIN_BYTE_OK;
                     mediaFlashImportApproved = TRUE;
 
-                    #if defined(DELIBERATE_BUNDLE_PASSWORD_CHECK_SKIP)
+                    #if defined(MINI_PREPRODUCTION_SETUP_ACC)
                         /* Version with custom bootloader: copy version in eeprom */
                         eeprom_write_block(MOOLTIPASS_VERSION, (void*)EEP_USER_DATA_START_ADDR, 4);
 
@@ -1054,21 +1075,28 @@ void usbProcessIncoming(uint8_t caller_id)
             // Check that args are supplied
             if (datalen == 2)
             {
+                #ifdef MINI_KICKSTARTER_SETUP
+                    // For security reasons knock parameter can only be changed when no card is inserted
+                    if ((msg->body.data[0] == MINI_KNOCK_DETECT_ENABLE_PARAM) && (isSmartCardAbsent() != RETURN_OK))
+                    {
+                        plugin_return_value = PLUGIN_BYTE_ERROR;
+                        break;
+                    }
+                #endif
+
                 // Set correct value in eeprom and refresh parameters that need refreshing
                 setMooltipassParameterInEeprom(msg->body.data[0], msg->body.data[1]);
                 mp_timeout_enabled = getMooltipassParameterInEeprom(LOCK_TIMEOUT_ENABLE_PARAM);
                 plugin_return_value = PLUGIN_BYTE_OK;
 
                 #ifdef MINI_PREPRODUCTION_SETUP_ACC
-                    // For this particular defines, platforms may or may not have an accelerometer. So we return a fail if the accelerometer is not present if the user is trying to enable the knock feature
+                    // For this particular define, platforms may or may not have an accelerometer. So we return a fail if the accelerometer is not present if the user is trying to enable the knock feature
                     if ((msg->body.data[0] == MINI_KNOCK_DETECT_ENABLE_PARAM) && (acc_detected == FALSE))
                     {
                         plugin_return_value = PLUGIN_BYTE_ERROR;
                     }
                 #endif
 
-                //initTouchSensing();
-                //launchCalibrationCycle();
                 #ifdef MINI_VERSION
                     miniOledSetContrastCurrent(getMooltipassParameterInEeprom(MINI_OLED_CONTRAST_CURRENT_PARAM));
                 #endif
@@ -1076,6 +1104,10 @@ void usbProcessIncoming(uint8_t caller_id)
                     knock_detection_threshold = getMooltipassParameterInEeprom(MINI_KNOCK_THRES_PARAM);
                     knock_detection_enabled = getMooltipassParameterInEeprom(MINI_KNOCK_DETECT_ENABLE_PARAM);
                 #endif
+
+                // Lines below were commented as the app doesn't change touch parameters for the mooltipass standard
+                //initTouchSensing();
+                //launchCalibrationCycle();
             }
             else
             {
@@ -1409,6 +1441,14 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
+
+        // get number of free slots for new users
+        case CMD_GET_FREE_NB_USR_SLT:
+        {
+            // Second parameter, which is returned by the code by default, is the number of free user slots
+            findAvailableUserId(msg->body.data, &plugin_return_value);
+            break;
+        }
         
         #ifndef MINI_VERSION
         // Jump to bootloader
@@ -1448,8 +1488,11 @@ void usbProcessIncoming(uint8_t caller_id)
 #ifdef STACK_DEBUG
         case CMD_STACK_FREE:
         {
-            uint16_t freebytes = stackFree();
-            usbSendMessage(CMD_STACK_FREE, sizeof(freebytes), &freebytes);
+            // Return current amount of free stack and amount of free stack at boot
+            uint16_t answer[2];
+            answer[0] = stackFree();
+            answer[1] = &__stack - &_end;
+            usbSendMessage(CMD_STACK_FREE, sizeof(answer), &answer);
             return;
         }
 #endif

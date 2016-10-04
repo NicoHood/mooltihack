@@ -928,18 +928,21 @@ void populateServicesLut(void)
     }
 }
 
-/*! \fn     getPreviousNextFirstLetterForGivenLetter(char c, char* array)
+/*! \fn     getPreviousNextFirstLetterForGivenLetter(char c, char* array, uint16_t* parent_addresses)
 *   \brief  Get the previous and next letter around a given letter
-*   \param  c       The first letter
-*   \param  array   Three char array to store the previous and next one
+*   \param  c                   The first letter
+*   \param  array               Three char array to store the previous and next one
+*   \param  parent_addresses    Three uint16_t array to store the corresponding parent addresses
 *   \note   In the array, all letters will be higher case
 */
-void getPreviousNextFirstLetterForGivenLetter(char c, char* array)
+void getPreviousNextFirstLetterForGivenLetter(char c, char* array, uint16_t* parent_addresses)
 {
-    // Set #s by default
+    // Set -s by default
     memset(array, '-', 3);
+    parent_addresses[0] = NODE_ADDR_NULL;
+    parent_addresses[2] = NODE_ADDR_NULL;
 
-    // Store c
+    // Store the provided char as first letter for the current credential
     if ((c >= 'a') && (c <= 'z'))
     {
         array[1] = c - 'a' + 'A';
@@ -954,13 +957,17 @@ void getPreviousNextFirstLetterForGivenLetter(char c, char* array)
     {
         if (currentNodeMgmtHandle.servicesLut[i] != NODE_ADDR_NULL)
         {
-            if ((i + 'a') < c)
+            if (((i + 'a') < c) && (array[0] != (i + 'A')))
             {
+                // First letter before the current one, only run once for each letter
                 array[0] = i + 'A';
+                parent_addresses[0] = currentNodeMgmtHandle.servicesLut[i];
             }
             if ((i + 'a') > c)
             {
+                // First letter after the current one
                 array[2] = i + 'A';
+                parent_addresses[2] = currentNodeMgmtHandle.servicesLut[i];
                 return;
             }
         }
@@ -1148,7 +1155,8 @@ RET_TYPE updateChildNode(pNode *p, cNode *c, uint16_t pAddr, uint16_t cAddr)
 {
         RET_TYPE ret = RETURN_OK;
         pNode* ip = (pNode*)&(currentNodeMgmtHandle.tempgNode);
-        cNode* ic = &(currentNodeMgmtHandle.child.child);
+        cNode buf_cnode;
+        cNode* ic = &buf_cnode;
         
         // read the node at parentNodeAddress
         // userID check and valid Check performed in readParent
@@ -1181,7 +1189,7 @@ RET_TYPE updateChildNode(pNode *p, cNode *c, uint16_t pAddr, uint16_t cAddr)
         else
         {            
             // delete node in memory
-            ret = deleteChildNode(pAddr, cAddr);
+            ret = deleteChildNode(pAddr, cAddr, ic);
             if(ret != RETURN_OK)
             {
                 return ret;
@@ -1201,13 +1209,13 @@ RET_TYPE updateChildNode(pNode *p, cNode *c, uint16_t pAddr, uint16_t cAddr)
  * Deletes a child node from memory. Handles reorder of nodes and update to parent if needed.
  * @param   pAddr           The address of the parent of the child
  * @param   cAddr           The address of the child
+ * @param   ic              Pointer to a temporary childNode for buffer purposes
  * @return  success status
  * @note    Handles necessary doubly linked list management
  */
-RET_TYPE deleteChildNode(uint16_t pAddr, uint16_t cAddr)
+RET_TYPE deleteChildNode(uint16_t pAddr, uint16_t cAddr, cNode *ic)
 {
     pNode *ip = (pNode*)&(currentNodeMgmtHandle.tempgNode);
-    cNode *ic = &(currentNodeMgmtHandle.child.child);
     uint16_t prevAddress, nextAddress;
     
     // read parent node of child to delete
@@ -1265,3 +1273,60 @@ RET_TYPE deleteChildNode(uint16_t pAddr, uint16_t cAddr)
     scanNodeUsage();
     return RETURN_OK;
 }
+
+/**
+ * Updates the password field of a given child node
+ * @param   c               Pointer to a temporary child node for buffer purposes
+ * @param   cAddr           The address to the child node to update
+ * @param   password        Contents of the new password field, NODE_CHILD_SIZE_OF_PASSWORD long
+ * @param   ctr_value       New CTR value
+ * @note    cNode will be filled with the child node in case it may be useful....
+ * @return  success status
+ */
+RET_TYPE updateChildNodePassword(cNode* c, uint16_t cAddr, uint8_t* password, uint8_t* ctr_value)
+{    
+    // userID check and valid check performed in readChild
+    readChildNode(c, cAddr);
+    
+    // Write date created & used fields
+    c->dateCreated = currentDate;
+    c->dateLastUsed = currentDate;
+
+    // Update password & ctr fields
+    memcpy(c->password, password, NODE_CHILD_SIZE_OF_PASSWORD);
+    memcpy(c->ctr, ctr_value, USER_CTR_SIZE);
+
+    // service is identical just rewrite the node
+    writeNodeDataBlockToFlash(cAddr, c);
+    
+    // write is destructive.. read
+    readChildNode(c, cAddr);
+    
+    return RETURN_OK;
+}
+
+/**
+ * Updates the description field of a given child node
+ * @param   c               Pointer to a temporary child node for buffer purposes
+ * @param   cAddr           The address to the child node to update
+ * @param   description     Contents of the new description field, NODE_CHILD_SIZE_OF_DESCRIPTION long
+ * @note    cNode will be filled with the child node in case it may be useful....
+ * @return  success status
+ */
+RET_TYPE updateChildNodeDescription(cNode* c, uint16_t cAddr, uint8_t* description)
+{    
+    // userID check and valid check performed in readChild
+    readChildNode(c, cAddr);
+
+    // Update description field
+    memcpy(c->description, description, NODE_CHILD_SIZE_OF_DESCRIPTION);
+
+    // service is identical just rewrite the node
+    writeNodeDataBlockToFlash(cAddr, c);
+    
+    // write is destructive.. read
+    readChildNode(c, cAddr);
+    
+    return RETURN_OK;
+}
+

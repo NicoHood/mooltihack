@@ -53,7 +53,7 @@ static const uint8_t eeprom_param_init[] __attribute__((__progmem__)) =
     0x21,               // TOUCH_WHEEL_OS_PARAM1                Set touch wheel oversample (one bit gain)
     0x21,               // TOUCH_WHEEL_OS_PARAM2                Set touch wheel oversample (one bit gain)
     TRUE,               // FLASH_SCREEN_PARAM                   Enable flashy screen by default
-    TRUE,               // USER_REQ_CANCEL_PARAM                Enable the possibility to cancel user requests from USB
+    TRUE,               // USER_REQ_CANCEL_PARAM                Enable the possibility to cancel user requests from USB (NOT USED ANYMORE, but keep it until the apps don't use it anymore for its old puropose)
 #ifdef POST_KICKSTARTER_UPDATE_SETUP
     FALSE,              // TUTORIAL_BOOL_PARAM                  Disable the tutorial by default
 #else
@@ -73,6 +73,7 @@ static const uint8_t eeprom_param_init[] __attribute__((__progmem__)) =
     FALSE,              // MINI_KNOCK_DETECT_ENABLE_PARAM       Knock detection enable
     8,                  // MINI_KNOCK_THRES_PARAM               Threshold for knock detection
     TRUE,               // LOCK_UNLOCK_FEATURE_PARAM            Computer lock/unlock feature
+    FALSE,              // HASH_DISPLAY_FEATURE_PARAM           Display hash when unlocking the card
 };
 
 
@@ -175,10 +176,11 @@ void deleteUserIdFromSMCUIDLUT(uint8_t userid)
 
 /*! \fn     findAvailableUserId(uint8_t* userid)
 *   \brief  Find an available user ID
-*   \param  userid  Pointer where to store the found user id
+*   \param  userid          Pointer to where to store the found user id
+*   \param  nb_users_free   Pointer to where to store the number of free users slot
 *   \return Success status of the operation
 */
-RET_TYPE findAvailableUserId(uint8_t* userid)
+RET_TYPE findAvailableUserId(uint8_t* userid, uint8_t* nb_users_free)
 {
     uint8_t userIdArray[NODE_MAX_UID];
     uint8_t temp_userid;
@@ -197,6 +199,16 @@ RET_TYPE findAvailableUserId(uint8_t* userid)
         if (temp_userid < NODE_MAX_UID)
         {
             userIdArray[temp_userid] = TRUE;
+        }
+    }
+
+    // Browse through the found user IDs and count number of free user slots
+    *nb_users_free = 0;
+    for (i = 0; i < NODE_MAX_UID; i++)
+    {
+        if (userIdArray[i] == FALSE)
+        {
+            *nb_users_free = (*nb_users_free) + 1;
         }
     }
     
@@ -344,9 +356,10 @@ RET_TYPE writeSmartCardCPZForUserId(uint8_t* buffer, uint8_t* nonce, uint8_t use
 RET_TYPE addNewUserForExistingCard(uint8_t* nonce, uint8_t* user_id)
 {
     uint8_t temp_buffer[SMARTCARD_CPZ_LENGTH];
+    uint8_t temp_val;
     
     // Get new user id if possible
-    if (findAvailableUserId(user_id) == RETURN_NOK)
+    if (findAvailableUserId(user_id, &temp_val) == RETURN_NOK)
     {
         return RETURN_NOK;
     }
@@ -378,7 +391,7 @@ RET_TYPE addNewUserAndNewSmartCard(volatile uint16_t* pin_code)
 {
     uint8_t temp_buffer[AES_KEY_LENGTH/8];
     uint8_t temp_nonce[AES256_CTR_LENGTH];
-    uint8_t new_user_id;
+    uint8_t new_user_id, temp_val;
     
     // When inserting a new user and a new card, we need to setup the following elements
     // - AES encryption key, stored in the smartcard
@@ -390,7 +403,7 @@ RET_TYPE addNewUserAndNewSmartCard(volatile uint16_t* pin_code)
     guiDisplayProcessingScreen();
     
     // Get new user id if possible
-    if (findAvailableUserId(&new_user_id) == RETURN_NOK)
+    if (findAvailableUserId(&new_user_id, &temp_val) == RETURN_NOK)
     {
         return RETURN_NOK;
     }
