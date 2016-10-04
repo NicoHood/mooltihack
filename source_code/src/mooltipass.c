@@ -57,7 +57,7 @@
 #include "tests.h"
 #include "touch.h"
 #include "anim.h"
-#include "spi.h"
+#include "spi_usart.h"
 #include "pwm.h"
 #include "usb.h"
 #include "rng.h"

@@ -36,7 +36,7 @@ LD_FLAGS  += -flto -fuse-linker-plugin
 
 # Some helpers to get all the .c and .h files.
 # $(TARGET) is included inside $(OBJECTS).
-LIBDIRS := $(addprefix ./, GUI CARD FLASH USB SPI OLEDMP UTILS AES NODEMGMT RNG PWM TOUCH LOGIC OLEDMINI MINI)
+LIBDIRS := $(addprefix ./, GUI CARD FLASH USB SPI_USART OLEDMP UTILS AES NODEMGMT RNG PWM TOUCH LOGIC OLEDMINI MINI)
 LIBOBJS := $(foreach lib, $(LIBDIRS), $(wildcard $(lib)/*.c))
 OBJECTS := $(filter-out ./bootloader_main.c, $(wildcard ./*.c))
 
@@ -50,8 +50,8 @@ else
 # Bootloader build settings
 TARGET  = mooltipass_bootloader
 OBJECTS = bootloader_main.c
-LIBDIRS = $(addprefix ./, GUI CARD FLASH USB SPI OLEDMP UTILS AES NODEMGMT RNG PWM TOUCH LOGIC OLEDMINI MINI)
-OBJDIRS = $(addprefix ./, FLASH SPI AES)
+LIBDIRS = $(addprefix ./, GUI CARD FLASH USB SPI_USART OLEDMP UTILS AES NODEMGMT RNG PWM TOUCH LOGIC OLEDMINI MINI)
+OBJDIRS = $(addprefix ./, FLASH SPI_USART AES)
 LIBOBJS = $(filter-out ./FLASH/flash_test.c ./AES/aes256_nessie_test.c ./AES/aes256_ctr_test.c, $(foreach lib, $(OBJDIRS), $(wildcard $(lib)/*.c)))
 
 # Special bootloader flags

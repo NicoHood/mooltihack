@@ -17,44 +17,50 @@
  *
  * CDDL HEADER END
  */
-/*! \file   spi.h
+/*! \file   spi.c
  *  \brief  USART SPI functions
  *  Copyright [2014] [Darran Hunt]
  */
-#ifndef _SPI_H_
-#define _SPI_H_
+#include "spi_usart.h"
 
-#include "mooltipass.h"
-#include <stdint.h>
-#include <avr/io.h>
-
-/*
- * RATE = Fosc / 2*(URR1 + 1)
- *      = 16000000 / (2*URR1 + 2)
- *
- * URR1 = (Fosc / 2*RATE) - 1
- *
- * SPI Data rates
+/**
+ * Initialise the SPI USART interface to the specified data rate
  */
-#define SPI_RATE_8_MHZ		0
-#define SPI_RATE_4_MHZ		1
-#define SPI_RATE_2_MHZ		3
-#define SPI_RATE_1_MHZ		7
-#define SPI_RATE_800_KHZ	9
-#define SPI_RATE_500_KHZ	15
-#define SPI_RATE_400_KHZ	19
-#define SPI_RATE_100_KHZ	79
+void spiUsartBegin(void)
+{
+    // Enable pins
+    UBRR1 = 0;
 
-void spiUsartBegin(void);
-void spiUsartSetRate(uint16_t rate);
+    // MOSI & SCK as ouputs (enables master mode)
+    // MISO as input
+    // Disable pull-up
+    SPI_USART_DDR |= (1 << SCK_USART_BIT) | (1 << MOSI_USART_BIT);
+    SPI_USART_DDR &= ~(1 << MISO_USART_BIT);
+    SPI_USART_PORT &= ~(1 << MISO_USART_BIT);
 
-#ifndef MINI_BOOTLOADER
+    // Set MSPI mode of operation and SPI data mode 0.
+    // Enable receiver and transmitter
+    // Set data rate
+    UCSR1C = (1 << UMSEL11) | (1 << UMSEL10) | (0 << UCPOL1) | (0 << UCSZ10);
+    UCSR1B = (1<<RXEN1) | (1<<TXEN1);
+    UBRR1 = UBRR1_SPI_RATE(SPI_USART_RATE);
+}
+
+/**
+ * Change the SPI USART interface data rate
+ * @param rate - frequency to run the SPI interface at
+ */
+void spiUsartSetRate(uint16_t rate)
+{
+    UBRR1 = rate;
+}
+
 /**
  * send and receive a byte of data via the SPI USART interface.
  * @param data - the byte to send
  * @returns the received byte
  */
-static inline uint8_t spiUsartTransfer(uint8_t data)
+uint8_t spiUsartTransfer(uint8_t data)
 {
     /* Wait for empty transmit buffer */
     while (!(UCSR1A & (1<<UDRE1)));
@@ -63,28 +69,24 @@ static inline uint8_t spiUsartTransfer(uint8_t data)
     while (!(UCSR1A & (1<<RXC1)));
     return UDR1;
 }
-#else
-uint8_t spiUsartTransfer(uint8_t data);
-#endif
-
 
 /**
  * this function is just meant to raise the RXC bit
  */
-static inline void spiUsartDummyWrite(void)
+void spiUsartDummyWrite(void)
 {
     /* Wait for empty transmit buffer */
     while (!(UCSR1A & (1<<UDRE1)));
     UDR1 = 0x00;
     /* Wait for data to be received */
-    while (!(UCSR1A & (1<<RXC1)));    
+    while (!(UCSR1A & (1<<RXC1)));
 }
 
 /**
  * send a byte of data via the SPI USART interface.
  * @param data - the byte to send
  */
-static inline void spiUsartSendTransfer(uint8_t data)
+void spiUsartSendTransfer(uint8_t data)
 {
     /* Wait for data to be received */
     while (!(UCSR1A & (1<<RXC1)));
@@ -97,7 +99,7 @@ static inline void spiUsartSendTransfer(uint8_t data)
 /**
  * wait for the end of a send transfer
  */
-static inline void spiUsartWaitEndSendTransfer(void)
+void spiUsartWaitEndSendTransfer(void)
 {
     /* Wait for data to be received */
     while (!(UCSR1A & (1<<RXC1)));
@@ -109,7 +111,7 @@ static inline void spiUsartWaitEndSendTransfer(void)
  * @param data - pointer to buffer to store data in
  * @param size - number of bytes to read
  */
-static inline void spiUsartRead(uint8_t *data, uint16_t size)
+void spiUsartRead(uint8_t *data, uint16_t size)
 {
     while (size--)
     {
@@ -127,7 +129,7 @@ static inline void spiUsartRead(uint8_t *data, uint16_t size)
  * @param data - pointer to buffer of data to write
  * @param size - number of bytes to write
  */
-static inline void spiUsartWrite(uint8_t *data, uint16_t size)
+void spiUsartWrite(uint8_t *data, uint16_t size)
 {
     while (size--)
     {
@@ -139,5 +141,3 @@ static inline void spiUsartWrite(uint8_t *data, uint16_t size)
         UDR1;
     }
 }
-
-#endif

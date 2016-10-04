@@ -34,7 +34,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <avr/pgmspace.h>
-#include <spi.h>
+#include <spi_usart.h>
 
 #include "fonts.h"
 #include "bitmap.h"

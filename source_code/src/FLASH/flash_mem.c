@@ -30,7 +30,7 @@
 #include "usb.h"
 #include <avr/io.h>
 #include <stdint.h>
-#include <spi.h>
+#include <spi_usart.h>
 #if SPI_FLASH != SPI_USART
     #error "SPI not implemented"
 #endif

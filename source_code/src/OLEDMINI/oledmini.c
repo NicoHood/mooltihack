@@ -36,7 +36,7 @@
 #include "defines.h"
 #include "fonts.h"
 #include "utils.h"
-#include "spi.h"
+#include "spi_usart.h"
 #include "usb.h"
 /***********************************************************/
 /*  This file is only used for the Mooltipass mini version */

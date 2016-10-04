@@ -325,11 +325,7 @@ typedef int8_t RET_TYPE;
     #define SCK_SPI_NATIVE  PORTB1
     #define MOSI_SPI_NATIVE PORTB2
     #define MISO_SPI_NATIVE PORTB3
-    #define DDR_SPI_USART   DDRD
-    #define PORT_SPI_USART  PORTD
-    #define SCK_SPI_USART   PORTD5
-    #define MOSI_SPI_USART  PORTD3
-    #define MISO_SPI_USART  PORTD2
+    #define SPI_USART_RATE  8000000
     // Slave Select Flash
     #define PORTID_FLASH_nS PORTB7
     #define PORT_FLASH_nS   PORTB
@@ -395,11 +391,11 @@ typedef int8_t RET_TYPE;
     #define SCK_SPI_NATIVE  PORTB1
     #define MOSI_SPI_NATIVE PORTB2
     #define MISO_SPI_NATIVE PORTB3
-    #define DDR_SPI_USART   DDRD
-    #define PORT_SPI_USART  PORTD
-    #define SCK_SPI_USART   PORTD5
-    #define MOSI_SPI_USART  PORTD3
-    #define MISO_SPI_USART  PORTD2
+    #if defined(MINI_BOOTLOADER)
+        #define SPI_USART_RATE  8000000
+    #else
+        #define SPI_USART_RATE  4000000
+    #endif
     // Slave Select Flash
     #define PORTID_FLASH_nS PORTB4
     #define PORT_FLASH_nS   PORTB

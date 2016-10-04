@@ -31,7 +31,7 @@
 #include "defines.h"
 #include "delays.h"
 #include "pwm.h"
-#include "spi.h"
+#include "spi_usart.h"
 // This code is only used for the Mooltipass mini
 #ifdef MINI_VERSION
 // Wheel pressed duration counter
