@@ -27,6 +27,7 @@
 
 #include <AppConfig.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <avr/io.h>
 
 #ifndef F_CPU
@@ -77,7 +78,7 @@ uint8_t spiUsartTransfer(uint8_t data);
 void spiUsartDummyWrite(void);
 void spiUsartSendTransfer(uint8_t data);
 void spiUsartWaitEndSendTransfer(void);
-void spiUsartRead(uint8_t *data, uint16_t size);
-void spiUsartWrite(uint8_t *data, uint16_t size);
+void spiUsartRead(uint8_t *data, size_t size);
+void spiUsartWrite(uint8_t *data, size_t size);
 
 #endif

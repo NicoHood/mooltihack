@@ -111,7 +111,7 @@ void spiUsartWaitEndSendTransfer(void)
  * @param data - pointer to buffer to store data in
  * @param size - number of bytes to read
  */
-void spiUsartRead(uint8_t *data, uint16_t size)
+void spiUsartRead(uint8_t *data, size_t size)
 {
     while (size--)
     {
@@ -129,7 +129,7 @@ void spiUsartRead(uint8_t *data, uint16_t size)
  * @param data - pointer to buffer of data to write
  * @param size - number of bytes to write
  */
-void spiUsartWrite(uint8_t *data, uint16_t size)
+void spiUsartWrite(uint8_t *data, size_t size)
 {
     while (size--)
     {
