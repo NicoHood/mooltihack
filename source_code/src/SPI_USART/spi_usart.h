@@ -18,67 +18,18 @@
  * CDDL HEADER END
  */
 
-/*! \file   spi.h
+/*! \file   spi_usart.h
  *  \brief  USART SPI functions
  *  Copyright [2014] [Darran Hunt]
  */
-#ifndef _SPI_H_
-#define _SPI_H_
+#pragma once
 
-#include <AppConfig.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <avr/io.h>
-
-#ifndef F_CPU
-    #error "F_CPU not defined"
-#endif
-
-/**
- * SPI Data rates:
- *
- * RATE = F_CPU / 2*(URR1 + 1)
- *      = 16000000 / (2*URR1 + 2)
- *
- * URR1 = (F_CPU / (2*RATE)) - 1
- */
-#define UBRR1_SPI_RATE(rate) ((F_CPU / (2UL * rate)) - 1UL)
-
-// Configuration examples
-//#define SPI_USART_RATE 8000000UL //   8MHz ->  0
-//#define SPI_USART_RATE 4000000UL //   4MHz ->  1
-//#define SPI_USART_RATE 2000000UL //   2MHz ->  3
-//#define SPI_USART_RATE 1000000UL //   1MHz ->  7
-//#define SPI_USART_RATE 800000UL  // 800KHz ->  9
-//#define SPI_USART_RATE 500000UL  // 500KHz -> 15
-//#define SPI_USART_RATE 400000UL  // 400KHz -> 19
-//#define SPI_USART_RATE 100000UL  // 100KHz -> 79
-
-// SPI_USART_RATE needs to be defined above or via make flag -D or -include
-#ifndef SPI_USART_RATE
-    #error "SPI_USART_RATE not defined"
-#endif
-
-// SPI USART pin definitions
-#if defined(__AVR_ATmega32U4__)
-    // Name schema similar to normal SPI definitions in avr/io.h
-    #define SPI_USART_DDR   DDRD
-    #define SPI_USART_PORT  PORTD
-    #define SCK_USART_BIT   PORTD5
-    #define MOSI_USART_BIT  PORTD3
-    #define MISO_USART_BIT  PORTD2
-#else
-    #error "USART SPI pins not defined for this MCU"
-#endif
 
 // Function prototypes
 void spiUsartBegin(void);
-void spiUsartSetRate(uint16_t rate);
+void spiUsartSetRate(uint32_t rate);
 uint8_t spiUsartTransfer(uint8_t data);
-void spiUsartDummyWrite(void);
-void spiUsartSendTransfer(uint8_t data);
-void spiUsartWaitEndSendTransfer(void);
 void spiUsartRead(uint8_t *data, size_t size);
 void spiUsartWrite(uint8_t *data, size_t size);
-
-#endif
