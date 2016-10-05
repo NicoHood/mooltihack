@@ -637,7 +637,7 @@ void oledWriteCommand(uint8_t reg)
 {
     PORT_OLED_SS &= ~(1 << PORTID_OLED_SS);
     PORT_OLED_DnC &= ~(1 << PORTID_OLED_DnC);
-    spiUsartTransfer(reg);
+    spiUsartTransfer8(reg);
     PORT_OLED_SS |= (1 << PORTID_OLED_SS);
 }
 
@@ -648,8 +648,8 @@ void oledWriteCommand(uint8_t reg)
 void oledWriteData(uint8_t data)
 {
     PORT_OLED_SS &= ~(1 << PORTID_OLED_SS);
-    PORT_OLED_DnC |= (1 << PORTID_OLED_DnC); 
-    spiUsartTransfer(data);
+    PORT_OLED_DnC |= (1 << PORTID_OLED_DnC);
+    spiUsartTransfer8(data);
     PORT_OLED_SS |= (1 << PORTID_OLED_SS);
 }
 
@@ -662,8 +662,8 @@ void oledWriteWord(uint16_t data)
 {
     PORT_OLED_SS &= ~(1 << PORTID_OLED_SS);
     PORT_OLED_DnC |= (1 << PORTID_OLED_DnC);
-    spiUsartTransfer((uint8_t)(data>>8));
-    spiUsartTransfer((uint8_t)(data&0xFF));
+    spiUsartTransfer8((uint8_t)(data>>8));
+    spiUsartTransfer8((uint8_t)(data&0xFF));
     PORT_OLED_SS |= (1 << PORTID_OLED_SS);
 }
 

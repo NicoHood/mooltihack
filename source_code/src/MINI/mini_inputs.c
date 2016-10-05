@@ -95,7 +95,7 @@ void miniAccelerometerSendReceiveSPIData(uint8_t* data, uint8_t nbBytes)
     PORT_ACC_SS &= ~(1 << PORTID_ACC_SS);
     while(nbBytes--)
     {
-        *data = spiUsartTransfer(*data);
+        *data = spiUsartTransfer8(*data);
         data++;
     }
     PORT_ACC_SS |= (1 << PORTID_ACC_SS);
@@ -182,10 +182,10 @@ RET_TYPE getNewAccelerometerDataIfAvailable(uint8_t* buffer)
     if (PIN_ACC_INT & (1 << PORTID_ACC_INT))
     {
         PORT_ACC_SS &= ~(1 << PORTID_ACC_SS);
-        spiUsartTransfer(0xA8);
+        spiUsartTransfer8(0xA8);
         for (uint8_t i = 0; i < 6; i++)
         {
-            *buffer++ = spiUsartTransfer(0x00);
+            *buffer++ = spiUsartTransfer8(0x00);
         }
         PORT_ACC_SS |= (1 << PORTID_ACC_SS);
         return RETURN_OK;

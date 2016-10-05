@@ -78,14 +78,14 @@ void sendDataToFlashWithFourBytesOpcode(uint8_t* opcode, uint8_t* buffer, uint16
     // Send opcode
     for (uint8_t i = 0; i < 4; i++)
     {
-        *opcode = spiUsartTransfer(*opcode);
+        *opcode = spiUsartTransfer8(*opcode);
         opcode++;
     }
 
     // Retrieve data
     while (buffer_size--)
     {
-        *buffer = spiUsartTransfer(*buffer);
+        *buffer = spiUsartTransfer8(*buffer);
         buffer++;
     }
 
@@ -105,8 +105,8 @@ void waitForFlash(void)
     uint8_t tempBool = TRUE;
     while(tempBool == TRUE)
     {
-        spiUsartTransfer(FLASH_OPCODE_READ_STAT_REG);
-        if(spiUsartTransfer(0)&FLASH_READY_BITMASK)
+        spiUsartTransfer8(FLASH_OPCODE_READ_STAT_REG);
+        if(spiUsartTransfer8(0)&FLASH_READY_BITMASK)
         {
             tempBool = FALSE;
         }

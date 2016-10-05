@@ -184,8 +184,8 @@ int main(void)
 
     /* Disable I2C block of the Accelerometer */
     PORT_ACC_SS &= ~(1 << PORTID_ACC_SS);
-    spiUsartTransfer(0x23);
-    spiUsartTransfer(0x02);
+    spiUsartTransfer8(0x23);
+    spiUsartTransfer8(0x02);
     PORT_ACC_SS |= (1 << PORTID_ACC_SS);
 
     /* Check Flash */

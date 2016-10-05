@@ -29,15 +29,33 @@
 extern "C" {
 #endif
 
+// Software version
+#define SPI_USART_VERSION 111
+
 #include <stdint.h>
 #include <stddef.h>
 
-// Function prototypes
+// Setup
 void spiUsartBegin(void);
 void spiUsartSetRate(uint32_t rate);
-uint8_t spiUsartTransfer(uint8_t data);
-void spiUsartRead(uint8_t *data, size_t size);
-void spiUsartWrite(uint8_t *data, size_t size);
+
+// Transfer: write & read data
+uint8_t spiUsartTransfer8(uint8_t data);
+// void spiUsartTransfer(uint8_t* data, size_t size);
+// void spiUsartTransferLSB(uint8_t* data, size_t size);
+// void spiUsartTransferMSB(uint8_t* data, size_t size);
+
+// Write data
+// void spiUsartWrite8(uint8_t data);
+void spiUsartWrite(uint8_t* data, size_t size);
+void spiUsartWriteLSB(uint8_t* data, size_t size);
+void spiUsartWriteMSB(uint8_t* data, size_t size);
+
+// Read data
+// uint8_t spiUsartRead8(void);
+void spiUsartRead(uint8_t* data, size_t size);
+// void spiUsartReadLSB(uint8_t* data, size_t size);
+// void spiUsartReadMSB(uint8_t* data, size_t size);
 
 #ifdef __cplusplus
 }
