@@ -175,9 +175,9 @@ int main(void)
     /* Init IOs */
     UHWCON = 0x01;                                              // Enable USB 3.3V LDO
     initFlashIOs();                                             // Init EXT Flash IOs
-    spiUsartBegin();                                            // Init SPI Controller    
+    spiUsartBegin();                                            // Init SPI Controller
     DDR_ACC_SS |= (1 << PORTID_ACC_SS);                         // Setup PORT for the Accelerometer SS
-    PORT_ACC_SS |= (1 << PORTID_ACC_SS);                        // Setup PORT for the Accelerometer SS    
+    PORT_ACC_SS |= (1 << PORTID_ACC_SS);                        // Setup PORT for the Accelerometer SS
     DDR_OLED_SS |= (1 << PORTID_OLED_SS);                       // Setup PORT for the OLED SS
     PORT_OLED_SS |= (1 << PORTID_OLED_SS);                      // Setup PORT for the OLED SS
     for (uint16_t i = 0; i < 20000; i++) asm volatile ("NOP");  // Wait for 3.3V to come up
