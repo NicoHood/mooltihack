@@ -25,6 +25,10 @@
 // Include Guard
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -34,3 +38,7 @@ void spiUsartSetRate(uint32_t rate);
 uint8_t spiUsartTransfer(uint8_t data);
 void spiUsartRead(uint8_t *data, size_t size);
 void spiUsartWrite(uint8_t *data, size_t size);
+
+#ifdef __cplusplus
+}
+#endif
