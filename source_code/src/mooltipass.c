@@ -236,8 +236,8 @@ int main(void)
     #endif                                      //
     rngInit();                                  // Initialize avrentropy library
     oledInitIOs();                              // Initialize OLED inputs/outputs
-    initFlashIOs();                             // Initialize Flash inputs/outputs
-    spiUsartBegin();                            // Start USART SPI at 8MHz (standard) or 4MHz (mini)
+    flash_init();                             // Initialize Flash inputs/outputs
+    spi_usart_init();                            // Start USART SPI at 8MHz (standard) or 4MHz (mini)
     #if defined(MINI_VERSION)                   // For the Mooltipass Mini inputs
         mini_inputs_result = initMiniInputs();  // Initialize Mini Inputs
     #endif                                      //

@@ -28,7 +28,7 @@
 /**
  * Initialise the SPI USART interface to the specified data rate
  */
-void spiUsartBegin(void)
+void spi_usart_init(void)
 {
     // Baud rate must be set to 0 prior to enabling the USART as SPI
     // master, to ensure proper initialization of the XCK line.
@@ -52,25 +52,17 @@ void spiUsartBegin(void)
 }
 
 /**
- * Change the SPI USART interface data rate
- * @param rate - frequency to run the SPI interface at
- */
-void spiUsartSetRate(uint32_t rate)
-{
-    UBRR1 = UBRR1_SPI_RATE(rate);
-}
-
-/**
  * Send and receive a byte of data via the SPI USART interface.
  * @param data - the byte to send
  * @returns the received byte
  */
-uint8_t spiUsartTransfer8(uint8_t data)
+uint8_t spi_usart_transfer_8(uint8_t data)
 {
-    /* Wait for empty transmit buffer */
+    // Wait for empty transmit buffer
     while (!(UCSR1A & (1 << UDRE1)));
     UDR1 = data;
-    /* Wait for data to be received */
+
+    // Wait for data to be received
     while (!(UCSR1A & (1 << RXC1)));
     return UDR1;
 }
@@ -80,18 +72,18 @@ uint8_t spiUsartTransfer8(uint8_t data)
  * @param data - pointer to buffer of data to send
  * @param size - number of bytes to send
  */
-void spiUsartTransfer(uint8_t* data, size_t size) __attribute__((alias("spiUsartTransferLSB")));
+void spi_usart_transfer(uint8_t* data, size_t size) __attribute__((alias("spi_usart_transfer_lsb")));
 
 /**
  * Send and receive a number of bytes via the SPI USART interface, LSB first
  * @param data - pointer to buffer of data to send
  * @param size - number of bytes to send
  */
-void spiUsartTransferLSB(uint8_t* data, size_t size)
+void spi_usart_transfer_lsb(uint8_t* data, size_t size)
 {
     while (size--)
     {
-        *data = spiUsartTransfer8(*data);
+        *data = spi_usart_transfer_8(*data);
         data++;
     }
 }
@@ -101,11 +93,11 @@ void spiUsartTransferLSB(uint8_t* data, size_t size)
  * @param data - pointer to buffer of data to send
  * @param size - number of bytes to send
  */
-void spiUsartTransferMSB(uint8_t* data, size_t size)
+void spi_usart_transfer_msb(uint8_t* data, size_t size)
 {
     while (size--)
     {
-        *(data + size) = spiUsartTransfer8(*(data + size));
+        *(data + size) = spi_usart_transfer_8(*(data + size));
     }
 }
 
@@ -113,9 +105,9 @@ void spiUsartTransferMSB(uint8_t* data, size_t size)
  * Write a byte of data via the SPI USART interface.
  * @param data - the byte to write
  */
-void spiUsartWrite8(uint8_t data)
+void spi_usart_write_8(uint8_t data)
 {
-    spiUsartTransfer8(data);
+    spi_usart_transfer_8(data);
 }
 
 /**
@@ -123,18 +115,18 @@ void spiUsartWrite8(uint8_t data)
  * @param data - pointer to buffer of data to write
  * @param size - number of bytes to write
  */
-void spiUsartWrite(uint8_t* data, size_t size) __attribute__((alias("spiUsartWriteLSB")));
+void spi_usart_write(uint8_t* data, size_t size) __attribute__((alias("spi_usart_write_lsb")));
 
 /**
  * Write a number of bytes to SPI USART interface, LSB first
  * @param data - pointer to buffer of data to write
  * @param size - number of bytes to write
  */
-void spiUsartWriteLSB(uint8_t* data, size_t size)
+void spi_usart_write_lsb(uint8_t* data, size_t size)
 {
     while (size--)
     {
-        spiUsartWrite8(*data++);
+        spi_usart_write_8(*data++);
     }
 }
 
@@ -143,11 +135,11 @@ void spiUsartWriteLSB(uint8_t* data, size_t size)
  * @param data - pointer to buffer of data to write
  * @param size - number of bytes to write
  */
-void spiUsartWriteMSB(uint8_t* data, size_t size)
+void spi_usart_write_msb(uint8_t* data, size_t size)
 {
     while (size--)
     {
-        spiUsartWrite8(*(data + size));
+        spi_usart_write_8(*(data + size));
     }
 }
 
@@ -155,9 +147,9 @@ void spiUsartWriteMSB(uint8_t* data, size_t size)
  * Reads a byte of data via the SPI USART interface.
  * @returns the received byte
  */
-uint8_t spiUsartRead8(void)
+uint8_t spi_usart_read_8(void)
 {
-    return spiUsartTransfer8(0x00);
+    return spi_usart_transfer_8(0x00);
 }
 
 /**
@@ -165,18 +157,18 @@ uint8_t spiUsartRead8(void)
  * @param data - pointer to buffer to store data in
  * @param size - number of bytes to read
  */
-void spiUsartRead(uint8_t* data, size_t size) __attribute__((alias("spiUsartReadLSB")));
+void spi_usart_read(uint8_t* data, size_t size) __attribute__((alias("spi_usart_read_lsb")));
 
 /**
  * Read a number of bytes from SPI USART interface, LSB first
  * @param data - pointer to buffer to store data in
  * @param size - number of bytes to read
  */
-void spiUsartReadLSB(uint8_t* data, size_t size)
+void spi_usart_read_lsb(uint8_t* data, size_t size)
 {
     while (size--)
     {
-        *data++ = spiUsartRead8();
+        *data++ = spi_usart_read_8();
     }
 }
 
@@ -185,10 +177,10 @@ void spiUsartReadLSB(uint8_t* data, size_t size)
  * @param data - pointer to buffer to store data in
  * @param size - number of bytes to read
  */
-void spiUsartReadMSB(uint8_t* data, size_t size)
+void spi_usart_read_msb(uint8_t* data, size_t size)
 {
     while (size--)
     {
-        *(data + size) = spiUsartRead8();
+        *(data + size) = spi_usart_read_8();
     }
 }

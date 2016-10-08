@@ -30,32 +30,31 @@ extern "C" {
 #endif
 
 // Software version
-#define SPI_USART_VERSION 111
+#define SPI_USART_VERSION 112
 
 #include <stdint.h>
 #include <stddef.h>
 
 // Setup
-void spiUsartBegin(void);
-void spiUsartSetRate(uint32_t rate);
+void spi_usart_init(void);
 
 // Transfer: write & read data
-uint8_t spiUsartTransfer8(uint8_t data);
-void spiUsartTransfer(uint8_t* data, size_t size);
-void spiUsartTransferLSB(uint8_t* data, size_t size);
-void spiUsartTransferMSB(uint8_t* data, size_t size);
+uint8_t spi_usart_transfer_8(uint8_t data);
+void spi_usart_transfer(uint8_t* data, size_t size);
+void spi_usart_transfer_lsb(uint8_t* data, size_t size);
+void spi_usart_transfer_msb(uint8_t* data, size_t size);
 
 // Write data
-void spiUsartWrite8(uint8_t data);
-void spiUsartWrite(uint8_t* data, size_t size);
-void spiUsartWriteLSB(uint8_t* data, size_t size);
-void spiUsartWriteMSB(uint8_t* data, size_t size);
+void spi_usart_write_8(uint8_t data);
+void spi_usart_write(uint8_t* data, size_t size);
+void spi_usart_write_lsb(uint8_t* data, size_t size);
+void spi_usart_write_msb(uint8_t* data, size_t size);
 
 // Read data
-uint8_t spiUsartRead8(void);
-void spiUsartRead(uint8_t* data, size_t size);
-void spiUsartReadLSB(uint8_t* data, size_t size);
-void spiUsartReadMSB(uint8_t* data, size_t size);
+uint8_t spi_usart_read_8(void);
+void spi_usart_read(uint8_t* data, size_t size);
+void spi_usart_read_lsb(uint8_t* data, size_t size);
+void spi_usart_read_msb(uint8_t* data, size_t size);
 
 #ifdef __cplusplus
 }

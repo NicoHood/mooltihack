@@ -36,7 +36,7 @@
 #include "flash_mem.h"
 #include "defines.h"
 #include "aes.h"
-#include "spi.h"
+#include "spi_usart.h"
 #define start_firmware()        asm volatile ("jmp 0x0000")
 #define MAX_FIRMWARE_SIZE       28672
 #define SPM_PAGE_SIZE_BYTES_BM  (SPM_PAGESIZE - 1)
@@ -175,7 +175,7 @@ int main(void)
     /* Init IOs */
     UHWCON = 0x01;                                              // Enable USB 3.3V LDO
     initFlashIOs();                                             // Init EXT Flash IOs
-    spiUsartBegin();                                            // Init SPI Controller
+    spi_usart_init();                                            // Init SPI Controller
     DDR_ACC_SS |= (1 << PORTID_ACC_SS);                         // Setup PORT for the Accelerometer SS
     PORT_ACC_SS |= (1 << PORTID_ACC_SS);                        // Setup PORT for the Accelerometer SS
     DDR_OLED_SS |= (1 << PORTID_OLED_SS);                       // Setup PORT for the OLED SS
@@ -184,8 +184,8 @@ int main(void)
 
     /* Disable I2C block of the Accelerometer */
     PORT_ACC_SS &= ~(1 << PORTID_ACC_SS);
-    spiUsartTransfer8(0x23);
-    spiUsartTransfer8(0x02);
+    spi_usart_transfer_8(0x23);
+    spi_usart_transfer_8(0x02);
     PORT_ACC_SS |= (1 << PORTID_ACC_SS);
 
     /* Check Flash */

@@ -211,7 +211,7 @@ void miniOledWriteCommand(uint8_t* data, uint8_t nbBytes)
     PORT_OLED_DnC &= ~(1 << PORTID_OLED_DnC);
     while(nbBytes--)
     {
-        spiUsartTransfer8(*data);
+        spi_usart_transfer_8(*data);
         data++;
     }
     PORT_OLED_SS |= (1 << PORTID_OLED_SS);
@@ -225,7 +225,7 @@ void miniOledWriteSimpleCommand(uint8_t reg)
 {
     PORT_OLED_SS &= ~(1 << PORTID_OLED_SS);
     PORT_OLED_DnC &= ~(1 << PORTID_OLED_DnC);
-    spiUsartTransfer8(reg);
+    spi_usart_transfer_8(reg);
     PORT_OLED_SS |= (1 << PORTID_OLED_SS);
 }
 
@@ -238,7 +238,7 @@ void miniOledWriteData(uint8_t* data, uint16_t nbBytes)
 {
     PORT_OLED_SS &= ~(1 << PORTID_OLED_SS);
     PORT_OLED_DnC |= (1 << PORTID_OLED_DnC);
-    spiUsartWrite(data, nbBytes);
+    spi_usart_write(data, nbBytes);
     PORT_OLED_SS |= (1 << PORTID_OLED_SS);
 }
 
@@ -309,7 +309,7 @@ void miniOledFlushBufferContents(uint8_t xstart, uint8_t xend, uint8_t ystart, u
     for (uint8_t page = page_start; page <= page_end; page++)
     {
         uint16_t buffer_shift = ((uint16_t)page) << SSD1305_WIDTH_BIT_SHIFT;
-        spiUsartWrite(&miniOledFrameBuffer[buffer_shift], xend - xstart);
+        spi_usart_write(&miniOledFrameBuffer[buffer_shift], xend - xstart);
     }
     PORT_OLED_SS |= (1 << PORTID_OLED_SS);
 }
