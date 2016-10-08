@@ -212,7 +212,7 @@ RET_TYPE checkUserPermission(uint16_t node_addr)
     readDataFromFlash(page_addr, byte_addr, 2, (void*)&temp_flags);
                     
     // Either the node belongs to us or it is invalid, check that the address is after sector 1 (upper check done at the flashread/write level)
-    if(((getCurrentUserID() == userIdFromFlags(temp_flags)) || (validBitFromFlags(temp_flags) == NODE_VBIT_INVALID)) && (page_addr >= PAGE_PER_SECTOR))
+    if(((getCurrentUserID() == userIdFromFlags(temp_flags)) || (validBitFromFlags(temp_flags) == NODE_VBIT_INVALID)) && (page_addr >= GRAPHIC_ZONE_PAGE_END))
     {
         return RETURN_OK;
     }
@@ -269,13 +269,13 @@ void userProfileStartingOffset(uint8_t uid, uint16_t *page, uint16_t *pageOffset
     {
         nodeMgmtCriticalErrorCallback();
     }
-    
-    #if ((BYTES_PER_PAGE % USER_PROFILE_SIZE) != 0)
+
+    #if ((FLASH_BYTES_PER_PAGE % USER_PROFILE_SIZE) != 0)
         #error "User profile size is not aligned with pages"
     #endif
-    
-    *page = uid/(BYTES_PER_PAGE/USER_PROFILE_SIZE);
-    *pageOffset = ((uint16_t)uid % (BYTES_PER_PAGE/USER_PROFILE_SIZE))*USER_PROFILE_SIZE;
+
+    *page = uid/(FLASH_BYTES_PER_PAGE/USER_PROFILE_SIZE);
+    *pageOffset = ((uint16_t)uid % (FLASH_BYTES_PER_PAGE/USER_PROFILE_SIZE))*USER_PROFILE_SIZE;
 }
 
 /**
@@ -882,25 +882,25 @@ void populateServicesLut(void)
     uint16_t temp_page_number;
     pNode* pnode_ptr = (pNode*)temp_node_buffer;
     uint8_t first_service_letter;
-    
+
     // Empty our current services list
     memset(currentNodeMgmtHandle.servicesLut, 0x00, sizeof(currentNodeMgmtHandle.servicesLut));
-    
+
     // If the dedicated boolean in eeprom is sent, do not actually populate the LUT
     if (getMooltipassParameterInEeprom(LUT_BOOT_POPULATING_PARAM) == FALSE)
     {
         currentNodeMgmtHandle.lastParentNode = getStartingParentAddress();
         return;
     }
-    
+
     // If we have at least one node, loop through our credentials
     while(next_node_addr != NODE_ADDR_NULL)
     {
         // Get the node page number
         temp_page_number = pageNumberFromAddress(next_node_addr);
-        
+
         // Check that we're not out of memory bounds
-        if(temp_page_number >= PAGE_COUNT)
+        if(temp_page_number >= FLASH_PAGE_COUNT)
         {
             // TODO: Set a bool somewhere to mention corrupted memory
             return;
@@ -1026,20 +1026,20 @@ uint8_t findFreeNodes(uint8_t nbNodes, uint16_t* nodeArray, uint16_t startPage, 
     uint8_t nodeItr;
     
     // Check the start page
-    if (startPage < PAGE_PER_SECTOR)
+    if (startPage < GRAPHIC_ZONE_PAGE_END)
     {
-        startPage = PAGE_PER_SECTOR;
+        startPage = GRAPHIC_ZONE_PAGE_END;
     }
 
     // for each page
-    for(pageItr = startPage; pageItr < PAGE_COUNT; pageItr++)
+    for(pageItr = startPage; pageItr < FLASH_PAGE_COUNT; pageItr++)
     {
         // for each possible parent node in the page (changes per flash chip)
-        for(nodeItr = startNode; nodeItr < NODE_PER_PAGE; nodeItr++)
+        for(nodeItr = startNode; nodeItr < (FLASH_BYTES_PER_PAGE / NODE_SIZE); nodeItr++)
         {
             // read node flags (2 bytes - fixed size)
             readDataFromFlash(pageItr, NODE_SIZE*nodeItr, 2, &nodeFlags);
-            
+
             // If this slot is OK
             if(validBitFromFlags(nodeFlags) == NODE_VBIT_INVALID)
             {

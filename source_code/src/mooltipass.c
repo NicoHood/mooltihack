@@ -252,8 +252,16 @@ int main(void)
     mp_timeout_enabled = getMooltipassParameterInEeprom(LOCK_TIMEOUT_ENABLE_PARAM);
 
     /** FLASH INITIALIZATION **/
-    flash_init_result = checkFlashID();         // Check for flash presence
-
+    // Check for flash presence
+    if(flash_check_device_id() != FLASH_RET_OK)
+    {
+        flash_init_result = RETURN_NOK;
+    }
+    else
+    {
+        flash_init_result = RETURN_OK;
+    }
+   
     /** OLED INITIALIZATION **/
     oledBegin(FONT_DEFAULT);                    // Only do it now as we're enumerated
     #ifdef MINI_VERSION
@@ -274,7 +282,8 @@ int main(void)
     /** FIRST BOOT FLASH & EEPROM INITIALIZATIONS **/
     if (current_bootkey_val != CORRECT_BOOTKEY)
     {
-        chipErase();                            // Erase everything in flash
+        // TODO check returnvalue for errors?
+        flash_erase_chip();                     // Erase everything in flash
         firstTimeUserHandlingInit();            // Erase # of cards and # of users
     }
 

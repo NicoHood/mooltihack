@@ -1027,7 +1027,7 @@ void usbProcessIncoming(uint8_t caller_id)
         case CMD_IMPORT_MEDIA :
         {
             // Check if we actually approved the import, haven't gone over the flash boundaries, if we're correctly aligned page size wise
-            if ((mediaFlashImportApproved == FALSE) || (mediaFlashImportPage >= GRAPHIC_ZONE_PAGE_END) || (mediaFlashImportOffset + datalen > BYTES_PER_PAGE))
+            if ((mediaFlashImportApproved == FALSE) || (mediaFlashImportPage >= GRAPHIC_ZONE_PAGE_END) || (mediaFlashImportOffset + datalen > FLASH_BYTES_PER_PAGE))
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
                 mediaFlashImportApproved = FALSE;
@@ -1038,7 +1038,7 @@ void usbProcessIncoming(uint8_t caller_id)
                 mediaFlashImportOffset+= datalen;
 
                 // If we just filled a page, flush it to the page
-                if (mediaFlashImportOffset == BYTES_PER_PAGE)
+                if (mediaFlashImportOffset == FLASH_BYTES_PER_PAGE)
                 {
                     flashWriteBufferToPage(mediaFlashImportPage);
                     mediaFlashImportOffset = 0;

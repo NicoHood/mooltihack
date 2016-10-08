@@ -327,9 +327,9 @@ typedef int8_t RET_TYPE;
     #define MISO_SPI_NATIVE PORTB3
     #define SPI_USART_RATE  8000000
     // Slave Select Flash
-    #define PORTID_FLASH_nS PORTB7
-    #define PORT_FLASH_nS   PORTB
-    #define DDR_FLASH_nS    DDRB
+    #define FLASH_BIT_SS    PB7
+    #define FLASH_PORT_SS   PORTB
+    #define FLASH_DDR_SS    DDRB
     // Detect smart card
     #define PORTID_SC_DET   PORTF5
     #define PORT_SC_DET     PORTF
@@ -397,9 +397,9 @@ typedef int8_t RET_TYPE;
         #define SPI_USART_RATE  4000000
     #endif
     // Slave Select Flash
-    #define PORTID_FLASH_nS PORTB4
-    #define PORT_FLASH_nS   PORTB
-    #define DDR_FLASH_nS    DDRB
+    #define FLASH_BIT_SS    PB4
+    #define FLASH_PORT_SS   PORTB
+    #define FLASH_DDR_SS    DDRB
     // Detect smart card
     #define PORTID_SC_DET   PORTC7
     #define PORT_SC_DET     PORTC

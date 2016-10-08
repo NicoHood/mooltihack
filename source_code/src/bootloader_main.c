@@ -174,7 +174,7 @@ int main(void)
 
     /* Init IOs */
     UHWCON = 0x01;                                              // Enable USB 3.3V LDO
-    initFlashIOs();                                             // Init EXT Flash IOs
+    flash_init();                                             // Init EXT Flash IOs
     spi_usart_init();                                            // Init SPI Controller
     DDR_ACC_SS |= (1 << PORTID_ACC_SS);                         // Setup PORT for the Accelerometer SS
     PORT_ACC_SS |= (1 << PORTID_ACC_SS);                        // Setup PORT for the Accelerometer SS
@@ -189,8 +189,8 @@ int main(void)
     PORT_ACC_SS |= (1 << PORTID_ACC_SS);
 
     /* Check Flash */
-    flash_init_result = checkFlashID();
-    if (flash_init_result != RETURN_OK)
+    flash_init_result = flash_check_device_id();
+    if (flash_init_result != FLASH_RET_OK)
     {
         while(1);
     }
@@ -258,7 +258,7 @@ int main(void)
             if (update_condition == FALSE)
             {
                 /* Update condition error */
-                sectorZeroErase(FLASH_SECTOR_ZERO_B_CODE);                                                                      // Erase graphics bundle
+                flash_erase_pages(8, 256 - 8); // Erase graphics bundle
                 eeprom_write_byte((uint8_t*)EEP_USER_DATA_START_ADDR + USER_PARAM_INIT_KEY_PARAM, USER_PARAM_CORRECT_INIT_KEY); // Reset parameters we overwrote by passing the version ID
                 eeprom_write_byte((uint8_t*)EEP_USER_DATA_START_ADDR + KEYBOARD_LAYOUT_PARAM, ID_KEYB_EN_US_LUT);               // Reset parameters we overwrote by passing the version ID
                 eeprom_write_byte((uint8_t*)EEP_USER_DATA_START_ADDR + USER_INTER_TIMEOUT_PARAM, 15);                           // Reset parameters we overwrote by passing the version ID

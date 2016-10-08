@@ -104,10 +104,10 @@ typedef enum _nodeType
 #define USER_CTR_SIZE 3             // USER_RES_CTR is set to 4 but the actual CTR is 3 bytes long and the last byte is for the user DB change number
 #define USER_DB_CHANGE_NB_SIZE  1
 
-#define GRAPHIC_ZONE_START          (8*BYTES_PER_PAGE)
+#define GRAPHIC_ZONE_START          (8*FLASH_BYTES_PER_PAGE)
 #define GRAPHIC_ZONE_PAGE_START     (8)
-#define GRAPHIC_ZONE_END            ((uint32_t)((uint32_t)SECTOR_START*(uint32_t)PAGE_PER_SECTOR*(uint32_t)BYTES_PER_PAGE))
-#define GRAPHIC_ZONE_PAGE_END       (SECTOR_START*PAGE_PER_SECTOR)
+#define GRAPHIC_ZONE_END            (256UL * 264UL) // End of Sector0b for 4M -> TODO this is not equal on all chips, but the size should be fix for all as the image bundle will not be larger with larger flash
+#define GRAPHIC_ZONE_PAGE_END       256UL // This page is NOT part of the graphics zone, its one above, start of user data actually -> TODO correct
 
 #define DELETE_POLICY_WRITE_ONES 0xFF  /*! Node Deletion Policy Ones Memset Value */
 

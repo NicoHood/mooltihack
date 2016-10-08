@@ -126,14 +126,14 @@ void clearSmartCardInsertedUnlocked(void)
 /*! \fn     eraseFlashUsersContents(void)
 *   \brief  Erase everything inside the flash
 */
-void eraseFlashUsersContents(void)
-{
-    sectorZeroErase(FLASH_SECTOR_ZERO_A_CODE);
-    for (uint8_t i = SECTOR_START; i <= SECTOR_END; i++)
-    {
-        sectorErase(i);
-    }
-}
+// void eraseFlashUsersContents(void)
+// {
+//     sectorZeroErase(FLASH_SECTOR_ZERO_A_CODE);
+//     for (uint8_t i = SECTOR_START; i <= SECTOR_END; i++)
+//     {
+//         sectorErase(i);
+//     }
+// }
 
 /*! \fn     initEncryptionHandling(uint8_t* aes_key, uint8_t* nonce)
 *   \brief  Initialize our encryption/decryption part

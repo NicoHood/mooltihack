@@ -18,418 +18,380 @@
  * CDDL HEADER END
  */
 
-/* Copyright (c) 2014, Michael Neiderhauser. All rights reserved. */
-
 /*!  \file     flash_mem.c
 *    \brief    Mooltipass Flash IC Library
-*    Created:  31/3/2014
-*    Author:   Michael Neiderhauser
 */
 #include "flash_mem.h"
-#include "defines.h"
-#include "usb.h"
-#include <avr/io.h>
-#include <stdint.h>
-#include <spi_usart.h>
-#if SPI_FLASH != SPI_USART
-    #error "SPI not implemented"
-#endif
+#include "flash_mem_private.h"
 
-
-/*! \fn     memoryBoundaryErrorCallback(void)
-*   \brief  Function called when a memory boundary issue occurs
-*/
-void memoryBoundaryErrorCallback(void)
+/**
+ * Reads the flash chip status register
+ * @return  flash chip status register
+ */
+static inline flash_status_reg_t flash_read_status_reg(void)
 {
-    // We'll add more debug later if needed
-    usbPutstr("#MBE");
-    while(1);
-}
+    flash_status_reg_t status_reg;
 
-/*! \fn     fillPageReadWriteEraseOpcodeFromAddress(uint16_t pageNumber, uint16_t offset, uint8_t* buffer)
-*   \brief  Fill the opcode address field from the page number and offset
-*   \param  pageNumber  Page number
-*   \param  offset      Offset in the page
-*   \param  buffer      Pointer to the buffer to fill
-*/
-static inline void fillPageReadWriteEraseOpcodeFromAddress(uint16_t pageNumber, uint16_t offset, uint8_t* buffer)
-{
-    #if (READ_OFFSET_SHT_AMT != WRITE_SHT_AMT) || (READ_OFFSET_SHT_AMT != PAGE_ERASE_SHT_AMT)
-        #error "read / write / erase bitshifts differ"
-    #endif
-    uint16_t temp_uint = (pageNumber << (READ_OFFSET_SHT_AMT-8)) | (offset >> 8);
-    buffer[0] = (uint8_t)(temp_uint >> 8);
-    buffer[1] = (uint8_t)temp_uint;
-    buffer[2] = (uint8_t)offset;
-}
+    // Assert chip select
+    FLASH_PORT_SS &= ~(1 << FLASH_BIT_SS);
 
+    // Read status register, Section 9.4, Table 9-1, Figure 25-10 in datasheet
+    spi_usart_write_8(FLASH_OPCODE_READ_STATUS_REG);
+    spi_usart_read_lsb(status_reg.raw, sizeof(status_reg));
 
-/*! \fn     sendDataToFlashWithFourBytesOpcode(uint8_t* opcode, uint8_t* buffer, uint16_t buffer_size)
-*   \brief  Send data with a four bytes opcode to flash
-*   \param  opcode      Pointer to 4 bytes long opcode
-*   \param  buffer      Pointer to the buffer of data
-*   \param  buffer_size Length of the buffer
-*/
-void sendDataToFlashWithFourBytesOpcode(uint8_t* opcode, uint8_t* buffer, uint16_t buffer_size)
-{
-    /* Assert chip select */
-    PORT_FLASH_nS &= ~(1 << PORTID_FLASH_nS);
+    // Deassert chip select
+    FLASH_PORT_SS |= (1 << FLASH_BIT_SS);
 
-    // Send opcode
-    for (uint8_t i = 0; i < 4; i++)
-    {
-        *opcode = spiUsartTransfer8(*opcode);
-        opcode++;
-    }
-
-    // Retrieve data
-    while (buffer_size--)
-    {
-        *buffer = spiUsartTransfer8(*buffer);
-        buffer++;
-    }
-
-    /* Deassert chip select */
-    PORT_FLASH_nS |= (1 << PORTID_FLASH_nS);
+    return status_reg;
 }
 
 /**
- * Waits for the flash to be ready (polls the flash chip status register)
- * @return  success status
+ * Read the Manufacturers and Device ID Register.
+ * @return  Manufacturers and Device ID Register
  */
-void waitForFlash(void)
+static inline flash_man_dev_id_t flash_read_manufacturer_device_id(void)
 {
-    /* Assert chip select */
-    PORT_FLASH_nS &= ~(1 << PORTID_FLASH_nS);
+    flash_man_dev_id_t man_dev_id;
 
-    uint8_t tempBool = TRUE;
-    while(tempBool == TRUE)
+    // Assert chip select
+    FLASH_PORT_SS &= ~(1 << FLASH_BIT_SS);
+
+    // Read manufacturer and device id, Section 12 in datasheet
+    spi_usart_write_8(FLASH_OPCODE_READ_MANUFACTURER_DEVICE_ID);
+    spi_usart_read_lsb(man_dev_id.raw, sizeof(man_dev_id));
+
+    // Deassert chip select
+    FLASH_PORT_SS |= (1 << FLASH_BIT_SS);
+
+    return man_dev_id;
+}
+
+/**
+ * Private internal library function to send an opcode along with data.
+ * Not all parameters need to be used.
+ * @param   page    The target page number of flash memory
+ * @param   offset  The starting byte offset to begin reading in pageNumber
+ * @param   data    The buffer used to store the data read from flash
+ * @param   size    The number of bytes to read from the flash memory into the data buffer
+ * @param   opcode  The opcode of the flash chip function to execute
+ * @param   write   Boolean to determine if a write or read operation should be executed
+ * @return  error code, zero means no error
+ * @note    Function DOES allow crossing page boundaries but prevents invalid page/offset inputs
+ */
+static inline flash_ret_t flash_transfer_opcode_data
+(uint16_t page, uint16_t offset, uint8_t* data, size_t size, flash_opcode_t opcode, bool write)
+{
+    // Check page and offset limits
+    if((page >= FLASH_PAGE_COUNT) || (offset >= FLASH_BYTES_PER_PAGE))
     {
-        spiUsartTransfer8(FLASH_OPCODE_READ_STAT_REG);
-        if(spiUsartTransfer8(0)&FLASH_READY_BITMASK)
-        {
-            tempBool = FALSE;
-        }
+        return FLASH_RET_ERR_INPUT_PARAM;
     }
 
-    /* Deassert chip select */
-    PORT_FLASH_nS |= (1 << PORTID_FLASH_nS);
-} // End waitForFlash
+    // Construct opcode
+    flash_opcode_addr_t op;
+    op.opcode = opcode;
+
+    // Construct address data manually to save some compiler overhead
+#if (FLASH_BYTES_PER_PAGE == 264)
+    op.raw16 = (page << (9 - 8)) | (offset >> 8);
+    op.raw8 = offset;
+#elif (FLASH_BYTES_PER_PAGE == 528)
+    op.raw16 = (page << (10 - 8)) | (offset >> 8);
+    op.raw8 = offset;
+#else
+    #warning "Bitshift for this page size not defined. Defaulting to struct."
+    op.mem_page_addr = page;
+    op.mem_byte_addr = offset;
+#endif
+
+    // Assert chip select
+    FLASH_PORT_SS &= ~(1 << FLASH_BIT_SS);
+
+    // Send opcode with MSB first
+    spi_usart_write_msb(op.raw, sizeof(flash_opcode_addr_t));
+
+    // Retrieve data
+    if(write)
+    {
+        spi_usart_write(data, size);
+    }
+    else
+    {
+        spi_usart_read(data, size);
+    }
+
+    // Deassert chip select
+    FLASH_PORT_SS |= (1 << FLASH_BIT_SS);
+
+    // Wait until memory is ready
+    // TODO move for read?
+    if(write){
+    flash_status_reg_t status_reg;
+    do
+    {
+        status_reg = flash_read_status_reg();
+    } while(!status_reg.ready0);
+
+    // Check for erase or programming errors
+    if (status_reg.erase_program_error)
+    {
+        return FLASH_RET_ERR_ERASE_PROGRAM;
+    }
+}
+
+    // No error
+    return FLASH_RET_OK;
+}
+
+/**
+ * Initializes SS IO for the Flash Chip
+ */
+void flash_init(void)
+{
+    // Setup chip select signal
+    FLASH_DDR_SS |= (1 << FLASH_BIT_SS);
+    FLASH_PORT_SS |= (1 << FLASH_BIT_SS);
+}
 
 /**
  * Attempts to read the Manufacturers Information Register.
  * @note    Performs a comparison to verify the size of the flash chip
- * @return  success status
+ * @return  error code, zero means no error
  */
-RET_TYPE checkFlashID(void)
+flash_ret_t flash_check_device_id(void)
 {
-    uint8_t dataBuffer[4];
+    // Read flash identification
+    flash_man_dev_id_t id = flash_read_manufacturer_device_id();
 
-    // Set the first byte to the correct op code
-    dataBuffer[0] = FLASH_OPCODE_READ_DEV_INFO;
-
-    /* Read flash identification */
-    sendDataToFlashWithFourBytesOpcode(dataBuffer, dataBuffer, 0);
-
-    /* Check ID */
-    if((dataBuffer[1] != FLASH_MANUF_ID) || (dataBuffer[2] != MAN_FAM_DEN_VAL))
+    // Check ID
+    if((id.manufacturer != FLASH_MANUF_ID) || (id.device_id_1 != FLASH_FAM_DEN_VAL))
     {
-        return RETURN_NOK;
+        return FLASH_RET_ERR_ID;
     }
-    else
-    {
-        return RETURN_OK;
-    }
-} // End checkFlashID
 
-/**
- * Initializes IOs for the Flash Chip
- */
-void initFlashIOs(void)
-{
-    /* Setup chip select signal */
-    DDR_FLASH_nS |= (1 << PORTID_FLASH_nS);
-    PORT_FLASH_nS |= (1 << PORTID_FLASH_nS);
+    // No error
+    return FLASH_RET_OK;
 }
 
 /**
- * Erases sector 0a if sectorNumber is FLASH_SECTOR_ZERO_A_CODE. Deletes sector 0b if sectorNumber is FLASH_SECTOR_ZERO_B_CODE.
- * @param   sectorNumber    The sector to erase
- * @note    Sets all bits in sector to Logic 1 (High)
+ * Reads a data buffer of flash memory. The data is read starting at offset of a page.
+ * @param   page    The target page number of flash memory
+ * @param   offset  The starting byte offset to begin reading in pageNumber
+ * @param   data    The buffer used to store the data read from flash
+ * @param   size    The number of bytes to read from the flash memory into the data buffer
+ * @return  error code, zero means no error
+ * @note    Function does NOT allow crossing page boundaries.
  */
-void sectorZeroErase(uint8_t sectorNumber)
+flash_ret_t flash_read_page(uint16_t page, uint16_t offset, uint8_t* data, size_t size)
 {
-    uint8_t opcode[4];
-
-    #ifdef MEMORY_BOUNDARY_CHECKS
-        // Error check parameter sectorNumber
-        if(!(sectorNumber == FLASH_SECTOR_ZERO_A_CODE || sectorNumber == FLASH_SECTOR_ZERO_B_CODE))
-        {
-            memoryBoundaryErrorCallback();
-        }
-    #endif
-
-    uint16_t temp_uint = (uint16_t)sectorNumber << (SECTOR_ERASE_0_SHT_AMT-8);
-    opcode[0] = FLASH_OPCODE_SECTOR_ERASE;
-    opcode[1] = (uint8_t)(temp_uint >> 8);
-    opcode[2] = (uint8_t)temp_uint;
-    opcode[3] = 0;
-    sendDataToFlashWithFourBytesOpcode(opcode, opcode, 0);
-
-    /* Wait until memory is ready */
-    waitForFlash();
-} // End sectorZeroErase
-
-/**
- * Erases sector sectorNumber (SECTOR_START -> SECTOR_END inclusive valid).
- * @param   sectorNumber    The sector to erase
- * @note    Sets all bits in sector to Logic 1 (High)
- */
-void sectorErase(uint8_t sectorNumber)
-{
-    uint8_t opcode[4];
-
-    #ifdef MEMORY_BOUNDARY_CHECKS
-        // Error check parameter sectorNumber
-        if((sectorNumber < SECTOR_START) || (sectorNumber > SECTOR_END)) // Ex: 1M -> SECTOR_START = 1, SECTOR_END = 3  sectorNumber must be 1, 2, or 3
-        {
-            memoryBoundaryErrorCallback();
-        }
-    #endif
-
-    uint16_t temp_uint = (uint16_t)sectorNumber << (SECTOR_ERASE_N_SHT_AMT-8);
-    opcode[0] = FLASH_OPCODE_SECTOR_ERASE;
-    opcode[1] = (uint8_t)(temp_uint >> 8);
-    opcode[2] = (uint8_t)temp_uint;
-    opcode[3] = 0;
-    sendDataToFlashWithFourBytesOpcode(opcode, opcode, 0);
-
-    /* Wait until memory is ready */
-    waitForFlash();
-} // End sectorErase
-
-/**
- * Erase the complete memory (filled with 1s)
- */
-void chipErase(void)
-{
-    uint8_t opcode[4] = {0xC7, 0x94, 0x80, 0x9A};
-    sendDataToFlashWithFourBytesOpcode(opcode, opcode, 0);
-
-    /* Wait until memory is ready */
-    waitForFlash();
+    // Extra error to not cross page boundaries
+    if((offset + size - 1) >= FLASH_BYTES_PER_PAGE)
+    {
+        return FLASH_RET_ERR_INPUT_PARAM;
+    }
+    return flash_transfer_opcode_data(page, offset, data, size, FLASH_OPCODE_READ_LOW_POWER, false);
 }
 
 /**
- * Erases block blockNumber (0 up to BLOCK_COUNT valid).
- * @param   blockNumber     The block to erase
- * @return  success status
- * @note    Sets all bits in block to Logic 1 (High)
+ * Writes a data buffer directly to flash memory. The data is written starting at offset of a page.
+ * @param   page       The target page number of flash memory
+ * @param   offset     The starting byte offset to begin writing in pageNumber
+ * @param   data       The buffer containing the data to write to flash memory
+ * @param   size   The number of bytes to write from the data buffer (assuming the data buffer is sufficiently large)
+ * @return  error code, zero means no error
+ * @note    Function does not allow crossing page boundaries.
  */
-void blockErase(uint16_t blockNumber)
-{
-    uint8_t opcode[4];
-
-    #ifdef MEMORY_BOUNDARY_CHECKS
-        // Error check parameter blockNumber
-        if(blockNumber >= BLOCK_COUNT)// Ex: 1M -> BLOCK_COUNT = 64.. valid pageNumber 0-63
-        {
-            memoryBoundaryErrorCallback();
-        }
-    #endif
-
-    uint16_t temp_uint = blockNumber << (BLOCK_ERASE_SHT_AMT-8);
-    opcode[0] = FLASH_OPCODE_BLOCK_ERASE;
-    opcode[1] = (uint8_t)(temp_uint >> 8);
-    opcode[2] = (uint8_t)temp_uint;
-    opcode[3] = 0;
-    sendDataToFlashWithFourBytesOpcode(opcode, opcode, 0);
-
-    /* Wait until memory is ready */
-    waitForFlash();
-} // End blockErase
-
-/**
- * Erases page pageNumber (0 up to PAGE_COUNT valid).
- * @param   pageNumber      The page to erase
- * @return  success status
- * @note    Sets all bits in page to Logic 1 (High)
- */
-void pageErase(uint16_t pageNumber)
-{
-    uint8_t opcode[4];
-
-    #ifdef MEMORY_BOUNDARY_CHECKS
-        // Error check parameter pageNumber
-        if(pageNumber >= PAGE_COUNT) // Ex: 1M -> PAGE_COUNT = 512.. valid pageNumber 0-511
-        {
-            memoryBoundaryErrorCallback();
-        }
-    #endif
-
-    opcode[0] = FLASH_OPCODE_PAGE_ERASE;
-    fillPageReadWriteEraseOpcodeFromAddress(pageNumber, 0, &opcode[1]);    // We can add the offset as they're "don't care" in the datasheet
-    sendDataToFlashWithFourBytesOpcode(opcode, opcode, 0);
-
-    /* Wait until memory is ready */
-    waitForFlash();
-} // End pageErase
-
-/**
- * Erases the entirety of spi flash memory by calling the appropriate erase functions.
- * @note    Sets all bits in spi flash memory to Logic 1 (High)
- */
-void formatFlash(void)
-{
-    sectorZeroErase(FLASH_SECTOR_ZERO_A_CODE); // erase sector 0a
-    sectorZeroErase(FLASH_SECTOR_ZERO_B_CODE); // erase sector 0b
-
-    for(uint8_t i = SECTOR_START; i <= SECTOR_END; i++)
+ flash_ret_t flash_write_page(uint16_t page, uint16_t offset, uint8_t* data, size_t size)
+ {
+    // Check if offset crossed page boundaries
+    if((offset + size - 1) >= FLASH_BYTES_PER_PAGE)
     {
-        sectorErase(i);
+        return FLASH_RET_ERR_INPUT_PARAM;
     }
+
+    // Read-Modify-Write with internal low level functions of the chip
+    return flash_transfer_opcode_data(page, offset, data, size, FLASH_OPCODE_READ_MODIFY_WRITE_BUF1, true);
+}
+
+/**
+ * Contiguous data read across flash page boundaries with a max 65k bytes addressing space
+ * @param   addr            byte offset in the flash
+ * @param   data            pointer to the buffer to store the read data
+ * @param   size            the number of bytes to read
+ * @return  error code, zero means no error
+ */
+flash_ret_t flash_read_raw(uint16_t addr, uint8_t* data, size_t size)
+{
+    // Check flash boundary
+    if(((uint32_t)addr + (uint32_t)size - 1UL) >= FLASH_SIZE)
+    {
+        return FLASH_RET_ERR_INPUT_PARAM;
+    }
+
+    // Map address to page and byte offset
+    uint16_t page = addr / FLASH_BYTES_PER_PAGE;
+    uint16_t offset = addr % FLASH_BYTES_PER_PAGE;
+    return flash_transfer_opcode_data(page, offset, data, size, FLASH_OPCODE_READ_LOW_POWER, false);
+}
+
+/**
+ * Contiguous data read across flash page boundaries with full addressing space (>65kb)
+ * @param   addr            byte offset in the flash
+ * @param   data            pointer to the buffer to store the read data
+ * @param   size            the number of bytes to read
+ * @return  error code, zero means no error
+ */
+flash_ret_t flash_read_raw_far(uint32_t addr, uint8_t* data, size_t size)
+{
+    // Check flash boundary
+    if(((uint32_t)addr + (uint32_t)size - 1UL) >= FLASH_SIZE)
+    {
+        return FLASH_RET_ERR_INPUT_PARAM;
+    }
+
+    // Map address to page and byte offset
+    uint16_t page = addr / FLASH_BYTES_PER_PAGE;
+    uint16_t offset = addr % FLASH_BYTES_PER_PAGE;
+    return flash_transfer_opcode_data(page, offset, data, size, FLASH_OPCODE_READ_LOW_POWER, false);
+}
+
+/**
+ * Contiguous data write across flash page boundaries with a max 65k bytes addressing space
+ * @param   addr            byte offset in the flash
+ * @param   data            The buffer containing the data to write to flash memory
+ * @param   size            the number of bytes to write
+ * @return  error code, zero means no error
+ */
+flash_ret_t flash_write_raw(uint16_t addr, uint8_t* data, size_t size)
+{
+    // Just use the full address space implementation to avoid code dumplication
+    return flash_write_raw_far(addr, data, size);
+}
+
+/**
+ * Contiguous data write across flash page boundaries with full addressing space (>65kb)
+ * @param   addr            byte offset in the flash
+ * @param   data            The buffer containing the data to write to flash memory
+ * @param   size            the number of bytes to write
+ * @return  error code, zero means no error
+ */
+flash_ret_t flash_write_raw_far(uint32_t addr, uint8_t* data, size_t size)
+{
+    // Check flash boundary
+    if(((uint32_t)addr + (uint32_t)size - 1UL) >= FLASH_SIZE)
+    {
+        return FLASH_RET_ERR_INPUT_PARAM;
+    }
+
+    // Map address to page and byte offset
+    uint16_t page = addr / FLASH_BYTES_PER_PAGE;
+    uint16_t offset = addr % FLASH_BYTES_PER_PAGE;
+
+    // Write page per page
+    size_t bytes_to_write;
+    flash_ret_t ret;
+    do
+    {
+        // Calculate how many bytes to write
+        bytes_to_write = size;
+        if(bytes_to_write > (FLASH_BYTES_PER_PAGE - offset)){
+            bytes_to_write = (FLASH_BYTES_PER_PAGE - offset);
+        }
+        size -= bytes_to_write;
+
+        // Write the page
+        ret = flash_write_page(page, offset, data, bytes_to_write);
+        if(ret != FLASH_RET_OK){
+           return ret;
+        }
+
+        // Only use the offset for the first write
+        offset = 0;
+        page++;
+    }
+    while(size);
+
+    return ret;
 }
 
 /**
  * Load a given page in the flash internal buffer
- * @param   pageNumber      The target page number of flash memory
+ * @param   page      The target page number of flash memory
+ * @return  error code, zero means no error
  */
-void loadPageToInternalBuffer(uint16_t pageNumber)
+flash_ret_t flash_read_into_buffer(uint16_t page)
 {
-    uint8_t opcode[4];
-
-    #ifdef MEMORY_BOUNDARY_CHECKS
-        // Error check the parameter pageNumber
-        if(pageNumber >= PAGE_COUNT) // Ex: 1M -> PAGE_COUNT = 512.. valid pageNumber 0-511
-        {
-            memoryBoundaryErrorCallback();
-        }
-    #endif
-
-    // Load the page in the internal buffer
-    opcode[0] = FLASH_OPCODE_MAINP_TO_BUF;
-    fillPageReadWriteEraseOpcodeFromAddress(pageNumber, 0, &opcode[1]);     // Prepare the opcode
-    sendDataToFlashWithFourBytesOpcode(opcode, opcode, 0);                  // Send command
-
-    /* Wait until memory is ready */
-    waitForFlash();
+    return flash_transfer_opcode_data(page, 0, NULL, 0, FLASH_OPCODE_READ_INTO_BUF2, true);
 }
 
 /**
- * Writes a data buffer to flash memory. The data is written starting at offset of a page.
- * @param   pageNumber      The target page number of flash memory
- * @param   offset          The starting byte offset to begin writing in pageNumber
- * @param   dataSize        The number of bytes to write from the data buffer (assuming the data buffer is sufficiently large)
- * @param   data            The buffer containing the data to write to flash memory
- * @note    The buffer will be destroyed.
- * @note    Function does not allow crossing page boundaries.
- */
-void writeDataToFlash(uint16_t pageNumber, uint16_t offset, uint16_t dataSize, void *data)
-{
-    uint8_t opcode[4];
-
-    #ifdef MEMORY_BOUNDARY_CHECKS
-        // Error check the parameter pageNumber
-        if(pageNumber >= PAGE_COUNT) // Ex: 1M -> PAGE_COUNT = 512.. valid pageNumber 0-511
-        {
-            memoryBoundaryErrorCallback();
-        }
-
-        // Error check the parameters offset and dataSize
-        if((offset + dataSize - 1) >= BYTES_PER_PAGE) // Ex: 1M -> BYTES_PER_PAGE = 264 offset + dataSize MUST be less than 264 (0-263 valid)
-        {
-            memoryBoundaryErrorCallback();
-        }
-    #endif
-
-    // Load the page in the internal buffer
-    loadPageToInternalBuffer(pageNumber);
-
-    // Write the bytes in the buffer, write the buffer to page
-    opcode[0] = FLASH_OPCODE_MMP_PROG_TBUF;
-    fillPageReadWriteEraseOpcodeFromAddress(pageNumber, offset, &opcode[1]);
-    sendDataToFlashWithFourBytesOpcode(opcode, data, dataSize);
-
-    /* Wait until memory is ready */
-    waitForFlash();
-} // End writeDataToFlash
-
-/**
- * Reads a data buffer of flash memory. The data is read starting at offset of a page.
- * @param   pageNumber      The target page number of flash memory
- * @param   offset          The starting byte offset to begin reading in pageNumber
- * @param   dataSize        The number of bytes to read from the flash memory into the data buffer (assuming the data buffer is sufficiently large)
- * @param   data            The buffer used to store the data read from flash
- * @note    Function does not allow crossing page boundaries.
- */
-void readDataFromFlash(uint16_t pageNumber, uint16_t offset, uint16_t dataSize, void *data)
-{
-    uint8_t opcode[4];
-
-    #ifdef MEMORY_BOUNDARY_CHECKS
-        // Error check the parameter pageNumber
-        if(pageNumber >= PAGE_COUNT) // Ex: 1M -> PAGE_COUNT = 512.. valid pageNumber 0-511
-        {
-            memoryBoundaryErrorCallback();
-        }
-        // Error check the parameters offset and dataSize
-        if((offset + dataSize - 1) >= BYTES_PER_PAGE) // Ex: 1M -> BYTES_PER_PAGE = 264 offset + dataSize MUST be less than 264 (0-263 valid)
-        {
-            memoryBoundaryErrorCallback();
-        }
-    #endif
-
-    opcode[0] = FLASH_OPCODE_LOWF_READ;
-    fillPageReadWriteEraseOpcodeFromAddress(pageNumber, offset, &opcode[1]);
-    sendDataToFlashWithFourBytesOpcode(opcode, data, dataSize);
-} // End readDataFromFlash
-
-/**
- * Contiguous data read across flash page boundaries with a max 65k bytes addressing space
- * @param   datap           pointer to the buffer to store the read data
- * @param   addr            byte offset in the flash
- * @param   size            the number of bytes to read
- * @note bypasses the memory buffer
- */
-void flashRawRead(uint8_t* datap, uint16_t addr, uint16_t size)
-{
-    uint16_t page_number = (addr/BYTES_PER_PAGE);
-    uint8_t high_byte = page_number >> (16 - READ_OFFSET_SHT_AMT);
-    addr = (page_number << READ_OFFSET_SHT_AMT) | (addr % BYTES_PER_PAGE);
-    uint8_t op[] = {FLASH_OPCODE_LOWF_READ, high_byte, (uint8_t)(addr >> 8), (uint8_t)addr};
-
-    /* Read from flash */
-    sendDataToFlashWithFourBytesOpcode(op, datap, size);
-}
-
-/**
- * Write data into the internal memory buffer
- * @param datap pointer to data to write
+ * Write data into the internal memory buffer. Used for writing multiple
+ * chunks of a flashpage, for example via the usb buffer in 62B chunks.
+ * Use flash_write_buffer_to_page() afterwards to save the buffer.
  * @param offset offset to start writing to in the internal memory buffer
- * @param size the number of bytes to write
- * @note if the end of the internal buffer is reached then writing will
- *       wrap to the start of the internal buffer.
+ * @param data   pointer to data to write
+ * @param size   the number of bytes to write
+ * @return  error code, zero means no error
+ * @note    Function does not allow crossing page boundaries.
  */
-void flashWriteBuffer(uint8_t* datap, uint16_t offset, uint16_t size)
+flash_ret_t flash_write_into_buffer(uint16_t offset, uint8_t* data, size_t size)
 {
-    uint8_t op[4];
+    // Check if offset crossed page boundaries
+    if((offset + size - 1) >= FLASH_BYTES_PER_PAGE)
+    {
+        return FLASH_RET_ERR_INPUT_PARAM;
+    }
 
-    op[0] = FLASH_OPCODE_BUF_WRITE;
-    fillPageReadWriteEraseOpcodeFromAddress(0, offset, &op[1]);
-    sendDataToFlashWithFourBytesOpcode(op, datap, size);
-    waitForFlash();
+    return flash_transfer_opcode_data(0, offset, data, size, FLASH_OPCODE_WRITE_INTO_BUF2, false);
 }
 
 /**
- * write the contents of the internal memory buffer to a page in flash
+ * Write the contents of the internal memory buffer to a page in flash
+ * Use it after flash_write_into_buffer()
  * @param   page the page to store the buffer in
+ * @return  error code, zero means no error
  */
-void flashWriteBufferToPage(uint16_t page)
+flash_ret_t flash_write_buffer_to_page(uint16_t page)
 {
-    uint8_t op[4];
+    return flash_transfer_opcode_data(page, 0 , NULL, 0, FLASH_OPCODE_WRITE_BUF2_TO_PAGE, true);
+}
 
-    op[0] = FLASH_OPCODE_BUF_TO_PAGE;
-    fillPageReadWriteEraseOpcodeFromAddress(page, 0, &op[1]);
-    sendDataToFlashWithFourBytesOpcode(op, op, 0);
-    waitForFlash();
+/**
+ * Erases page pageNumber (0 up to FLASH_PAGE_COUNT valid).
+ * @param   page      The page to erase
+ * @return  error code, zero means no error
+ * @note    Sets all bits in page to logic one (High, 0xFF)
+ */
+flash_ret_t flash_erase_page(uint16_t page)
+{
+    return flash_transfer_opcode_data(page, 0, NULL, 0, FLASH_OPCODE_ERASE_PAGE, true);
+}
+
+/**
+ * Erases multiple flash pages
+ */
+flash_ret_t flash_erase_pages(uint16_t page, uint16_t count)
+{
+    // TODO count boundary check -> start from the end?
+
+    // Erase all flash pages with the library page erase function
+    for (uint16_t i = page; i < (page + count); i++)
+    {
+        flash_ret_t ret = flash_erase_page(i);
+        if(ret)
+        {
+            return ret;
+        }
+    }
+
+    // No error
+    return FLASH_RET_OK;
+}
+
+/**
+ * Erase the complete memory (filled with logic 1 (0xFF, HIGH))
+ */
+flash_ret_t flash_erase_chip(void)
+{
+    return flash_erase_pages(0, FLASH_PAGE_COUNT);
 }

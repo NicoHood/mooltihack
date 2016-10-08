@@ -36,7 +36,7 @@ LD_FLAGS  += -flto -fuse-linker-plugin
 
 # Some helpers to get all the .c and .h files.
 # $(TARGET) is included inside $(OBJECTS).
-LIBDIRS := $(addprefix ./, GUI CARD FLASH USB OLEDMP UTILS NODEMGMT RNG PWM TOUCH LOGIC OLEDMINI MINI)
+LIBDIRS := $(addprefix ./, GUI CARD USB OLEDMP UTILS NODEMGMT RNG PWM TOUCH LOGIC OLEDMINI MINI)
 LIBOBJS := $(foreach lib, $(LIBDIRS), $(wildcard $(lib)/*.c))
 OBJECTS := $(filter-out ./bootloader_main.c, $(wildcard ./*.c))
 
@@ -50,9 +50,7 @@ else
 # Bootloader build settings
 TARGET  = mooltipass_bootloader
 OBJECTS = bootloader_main.c
-LIBDIRS = $(addprefix ./, GUI CARD FLASH USB SPI_USART OLEDMP UTILS NODEMGMT RNG PWM TOUCH LOGIC OLEDMINI MINI)
-OBJDIRS = $(addprefix ./, FLASH SPI_USART)
-LIBOBJS = $(filter-out ./FLASH/flash_test.c ./AES/aes256_nessie_test.c ./AES/aes256_ctr_test.c, $(foreach lib, $(OBJDIRS), $(wildcard $(lib)/*.c)))
+LIBDIRS = $(addprefix ./, GUI CARD USB OLEDMP UTILS NODEMGMT RNG PWM TOUCH LOGIC OLEDMINI MINI)
 
 # Special bootloader flags
 CC_FLAGS     += -DBOOT_START_ADDR=$(BOOT_START_OFFSET)
@@ -99,6 +97,7 @@ DMBS_PATH   ?= ../dmbs/DMBS
 # Include library build script makefile and sources
 include AES/AES.mk
 include SPI_USART/SPI_USART.mk
+include FLASH/FLASH.mk
 
 include $(DMBS_PATH)/core.mk
 include $(DMBS_PATH)/gcc.mk

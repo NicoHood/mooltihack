@@ -130,11 +130,10 @@ void mooltipassStandardElectricalTest(uint8_t fuse_ok)
     {
         // Test result, true by default
         uint8_t test_result = TRUE;
-        
-        // Leave flash nS off
-        DDR_FLASH_nS |= (1 << PORTID_FLASH_nS);
-        PORT_FLASH_nS |= (1 << PORTID_FLASH_nS);
-        
+
+        // Leave flash SS off
+        flash_init();
+
         // Set PORTD as output, leave PORTID_OLED_SS high
         DDRD |= 0xFF; PORTD |= 0xFF;
         
