@@ -79,22 +79,22 @@ uint8_t checkMooltipassPassword(uint8_t* data, void* addr, uint8_t length)
 {
     // We use PACKET_EXPORT_SIZE as our passwords are never longer than that
     uint8_t mooltipass_password[PACKET_EXPORT_SIZE];
-    
+
     // Read password in eeprom
     eeprom_read_block((void*)mooltipass_password, (void*)addr, length);
-    
+
     // Preventing side channel attacks: only return after a given amount of time
     activateTimer(TIMER_CREDENTIALS, 1000);
-    
+
     // Do the comparison
     volatile uint8_t password_comparison_result = memcmp((void*)mooltipass_password, (void*)data, length);
-    
+
     // Wait for credential timer to fire (we wanted to clear credential_timer_valid flag anyway)
     while (hasTimerExpired(TIMER_CREDENTIALS, FALSE) == TIMER_RUNNING);
-    
+
     // Clear buffer
     memset((void*)mooltipass_password, 0x00, PACKET_EXPORT_SIZE);
-    
+
     // Check comparison result
     if (password_comparison_result == 0)
     {
@@ -138,7 +138,7 @@ void lowerCaseString(uint8_t* data)
 *   \return If the sent text is ok
 */
 RET_TYPE checkTextField(uint8_t* data, uint8_t len, uint8_t max_len)
-{    
+{
     // Check that the advertised length is correct, that it is not null and isn't bigger than a data packet
     if ((len > max_len) || (len == 0) || (len != strlen((char*)data)+1) || (len > (RAWHID_RX_SIZE-HID_DATA_START)))
     {
@@ -190,13 +190,13 @@ void usbProcessIncoming(uint8_t caller_id)
 {
     // Our USB data buffer
     uint8_t incomingData[RAWHID_TX_SIZE];
-    
+
     // Try to read data from USB, return if we didn't receive anything
     if(usbRawHidRecv(incomingData) != RETURN_COM_TRANSF_OK)
     {
         return;
     }
-    
+
     // Temp plugin return value, error by default
     uint8_t plugin_return_value = PLUGIN_BYTE_ERROR;
 
@@ -216,7 +216,7 @@ void usbProcessIncoming(uint8_t caller_id)
 
     // Debug comms
     // USBDEBUGPRINTF_P(PSTR("usb: rx cmd 0x%02x len %u\n"), datacmd, datalen);
-    
+
     // Check if we're currently asking the user to enter his PIN or want to query the MP status
     if ((caller_id == USB_CALLER_PIN) || (datacmd == CMD_MOOLTIPASS_STATUS))
     {
@@ -225,7 +225,7 @@ void usbProcessIncoming(uint8_t caller_id)
         if (isSmartCardAbsent() == RETURN_NOK)
         {
             mp_status |= 0x01;
-        } 
+        }
         // Unlocking screen
         if (caller_id == USB_CALLER_PIN)
         {
@@ -245,14 +245,14 @@ void usbProcessIncoming(uint8_t caller_id)
         usbSendMessage(CMD_MOOLTIPASS_STATUS, 1, &mp_status);
         return;
     }
-    
+
     // Check the text fields when needed
     uint8_t text_field_check_needed = TRUE;
     uint8_t max_text_size = 0;
     if ((datacmd == CMD_CONTEXT) || (datacmd == CMD_ADD_CONTEXT) || (datacmd == CMD_SET_DATA_SERVICE) || (datacmd == CMD_ADD_DATA_SERVICE))
     {
         max_text_size = NODE_PARENT_SIZE_OF_SERVICE;
-    } 
+    }
     else if (datacmd == CMD_SET_LOGIN)
     {
         max_text_size = NODE_CHILD_SIZE_OF_LOGIN;
@@ -277,7 +277,7 @@ void usbProcessIncoming(uint8_t caller_id)
     {
         text_field_check_needed = FALSE;
     }
-    
+
     // Perform the text field check
     if ((text_field_check_needed == TRUE) && (checkTextField(msg->body.data, datalen, max_text_size) == RETURN_NOK))
     {
@@ -285,13 +285,13 @@ void usbProcessIncoming(uint8_t caller_id)
         usbSendMessage(datacmd, 1, &plugin_return_value);
         return;
     }
-    
+
     // Check that we are in node mangement mode when needed
     if ((datacmd >= FIRST_CMD_FOR_DATAMGMT) && (datacmd <= LAST_CMD_FOR_DATAMGMT) && (memoryManagementModeApproved == FALSE))
     {
         // Return an error that was defined before (ERROR)
         usbSendMessage(datacmd, 1, &plugin_return_value);
-        return;        
+        return;
     }
 
     // Otherwise, process command
@@ -313,7 +313,7 @@ void usbProcessIncoming(uint8_t caller_id)
 
         // version command
         case CMD_VERSION :
-        {            
+        {
             // Our Mooltipass version that will be returned to our application
             #ifndef MINI_VERSION
                 const char mooltipass_version[] = FLASH_CHIP_STR "" MOOLTIPASS_VERSION;
@@ -330,14 +330,14 @@ void usbProcessIncoming(uint8_t caller_id)
         {
             // So in case we're in memory management mode and want to set context, the LUT could be outdated
             if (memoryManagementModeApproved == TRUE)
-            {                
+            {
                 // Update our LUT
                 populateServicesLut();
             }
             if (getSmartCardInsertedUnlocked() != TRUE)
             {
                 plugin_return_value = PLUGIN_BYTE_NOCARD;
-                USBPARSERDEBUGPRINTF_P(PSTR("set context: no card\n"));                
+                USBPARSERDEBUGPRINTF_P(PSTR("set context: no card\n"));
             }
             else if (setCurrentContext(msg->body.data, SERVICE_CRED_TYPE) == RETURN_OK)
             {
@@ -351,7 +351,7 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
-        
+
         // data context command
         #ifdef DATA_STORAGE_EN
         case CMD_SET_DATA_SERVICE :
@@ -359,7 +359,7 @@ void usbProcessIncoming(uint8_t caller_id)
             if (getSmartCardInsertedUnlocked() != TRUE)
             {
                 plugin_return_value = PLUGIN_BYTE_NOCARD;
-                USBPARSERDEBUGPRINTF_P(PSTR("set context: no card\n"));                
+                USBPARSERDEBUGPRINTF_P(PSTR("set context: no card\n"));
             }
             else if (setCurrentContext(msg->body.data, SERVICE_DATA_TYPE) == RETURN_OK)
             {
@@ -509,7 +509,7 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
-        
+
         // Add data context
         #ifdef DATA_STORAGE_EN
         case CMD_ADD_DATA_SERVICE :
@@ -529,7 +529,7 @@ void usbProcessIncoming(uint8_t caller_id)
             break;
         }
         #endif
-    
+
         // Append data
         #ifdef DATA_STORAGE_EN
         case CMD_WRITE_32B_IN_DN :
@@ -547,7 +547,7 @@ void usbProcessIncoming(uint8_t caller_id)
             break;
         }
         #endif
-    
+
         // read data
         #ifdef DATA_STORAGE_EN
         case CMD_READ_32B_IN_DN :
@@ -592,7 +592,7 @@ void usbProcessIncoming(uint8_t caller_id)
             {
                 setProfileUserDbChangeNumber(&msg->body.data[0]);
                 plugin_return_value = PLUGIN_BYTE_OK;
-            } 
+            }
             else
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
@@ -602,7 +602,7 @@ void usbProcessIncoming(uint8_t caller_id)
 #endif
         // Read user profile in flash
         case CMD_START_MEMORYMGMT :
-        {            
+        {
             // Check that the smartcard is unlocked
             if (getSmartCardInsertedUnlocked() == TRUE)
             {
@@ -623,27 +623,27 @@ void usbProcessIncoming(uint8_t caller_id)
                     {
                         guiSetCurrentScreen(SCREEN_DEFAULT_INSERTED_LCK);
                     }
-                }                
+                }
                 // Change screen
                 guiGetBackToCurrentScreen();
-            }            
+            }
             break;
         }
-        
+
         // Read starting parent
         case CMD_GET_STARTING_PARENT :
         {
             // Memory management mode check implemented before the switch
             // Read starting parent
             uint16_t temp_address = getStartingParentAddress();
-                
+
             // Send address
             usbSendMessage(CMD_GET_STARTING_PARENT, 2, (uint8_t*)&temp_address);
-                
+
             // Return
-            return;         
+            return;
         }
-        
+
         // Read data starting parent
         #ifdef DATA_STORAGE_EN
         case CMD_GET_DN_START_PARENT :
@@ -651,15 +651,15 @@ void usbProcessIncoming(uint8_t caller_id)
             // Memory management mode check implemented before the switch
             // Read starting parent
             uint16_t temp_address = getStartingDataParentAddress();
-                
+
             // Send address
             usbSendMessage(CMD_GET_DN_START_PARENT, 2, (uint8_t*)&temp_address);
-                
+
             // Return
-            return;          
+            return;
         }
         #endif
-        
+
         // Get free node addresses
         case CMD_GET_FREE_SLOTS_ADDR :
         {
@@ -670,10 +670,10 @@ void usbProcessIncoming(uint8_t caller_id)
                 uint16_t* temp_addr_ptr = (uint16_t*)msg->body.data;
                 uint16_t nodeAddresses[31];
                 uint8_t nodesFound;
-                
+
                 // Call the dedicated function
                 nodesFound = findFreeNodes(31, nodeAddresses, pageNumberFromAddress(*temp_addr_ptr), nodeNumberFromAddress(*temp_addr_ptr));
-                
+
                 // Send addresses
                 usbSendMessage(CMD_GET_FREE_SLOTS_ADDR, nodesFound*2, (uint8_t*)nodeAddresses);
                 return;
@@ -681,10 +681,10 @@ void usbProcessIncoming(uint8_t caller_id)
             else
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
-                break;                
+                break;
             }
         }
-        
+
         // End memory management mode
         case CMD_END_MEMORYMGMT :
         {
@@ -700,7 +700,7 @@ void usbProcessIncoming(uint8_t caller_id)
             scanNodeUsage();
             break;
         }
-        
+
         // Read node from Flash
         case CMD_READ_FLASH_NODE :
         {
@@ -712,7 +712,7 @@ void usbProcessIncoming(uint8_t caller_id)
                 uint16_t* temp_node_addr_ptr = (uint16_t*)msg->body.data;
                 // Temp buffer to store the node
                 uint8_t temp_buffer[NODE_SIZE];
-                
+
                 //  Check user permissions
                 if(checkUserPermission(*temp_node_addr_ptr) == RETURN_OK)
                 {
@@ -724,7 +724,7 @@ void usbProcessIncoming(uint8_t caller_id)
                 else
                 {
                     plugin_return_value = PLUGIN_BYTE_ERROR;
-                }                
+                }
             }
             else
             {
@@ -732,7 +732,7 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
-        
+
         // Set favorite
         case CMD_SET_FAVORITE :
         {
@@ -742,7 +742,7 @@ void usbProcessIncoming(uint8_t caller_id)
             {
                 uint16_t* temp_par_addr = (uint16_t*)&msg->body.data[1];
                 uint16_t* temp_child_addr = (uint16_t*)&msg->body.data[3];
-                
+
                 setFav(msg->body.data[0], *temp_par_addr, *temp_child_addr);
                 plugin_return_value = PLUGIN_BYTE_OK;
             }
@@ -750,9 +750,9 @@ void usbProcessIncoming(uint8_t caller_id)
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
             }
-            break;            
+            break;
         }
-        
+
         // Get favorite
         case CMD_GET_FAVORITE :
         {
@@ -771,7 +771,7 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
-        
+
         // Set starting parent
         case CMD_SET_STARTING_PARENT :
         {
@@ -787,9 +787,9 @@ void usbProcessIncoming(uint8_t caller_id)
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
             }
-            break;            
+            break;
         }
-        
+
         // Set data starting parent
         #ifdef DATA_STORAGE_EN
         case CMD_SET_DN_START_PARENT :
@@ -806,10 +806,10 @@ void usbProcessIncoming(uint8_t caller_id)
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
             }
-            break;            
+            break;
         }
         #endif
-        
+
         // Set new CTR value
         case CMD_SET_CTRVALUE :
         {
@@ -824,24 +824,24 @@ void usbProcessIncoming(uint8_t caller_id)
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
             }
-            break;            
+            break;
         }
-        
+
         // Get CTR value
         case CMD_GET_CTRVALUE :
         {
             // Memory management mode check implemented before the switch
             // Temp buffer to store CTR
             uint8_t tempCtrVal[USER_CTR_SIZE];
-                
+
             // Read CTR value
             readProfileCtr(tempCtrVal);
-                
+
             // Send it
             usbSendMessage(CMD_GET_CTRVALUE, USER_CTR_SIZE, tempCtrVal);
             return;
         }
-        
+
         // Add a known card to the MP, 8 first bytes is the CPZ, next 16 is the CTR nonce
         case CMD_ADD_CARD_CPZ_CTR :
         {
@@ -855,7 +855,7 @@ void usbProcessIncoming(uint8_t caller_id)
                 }
                 else
                 {
-                    plugin_return_value = PLUGIN_BYTE_ERROR;                    
+                    plugin_return_value = PLUGIN_BYTE_ERROR;
                 }
             }
             else
@@ -864,29 +864,29 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
-        
+
         // Get all the cpz ctr values for current user
         case CMD_GET_CARD_CPZ_CTR :
         {
             // Memory management mode check implemented before the switch
             outputLUTEntriesForGivenUser(getCurrentUserID());
-            plugin_return_value = PLUGIN_BYTE_OK;            
-            break;            
+            plugin_return_value = PLUGIN_BYTE_OK;
+            break;
         }
-        
+
         // Write node in Flash
-        case CMD_WRITE_FLASH_NODE : 
+        case CMD_WRITE_FLASH_NODE :
         {
             // First two bytes are the node address
             uint16_t* temp_node_addr_ptr = (uint16_t*)msg->body.data;
-            
+
             // Check that the plugin provided the address and packet #
             if (datalen < 3)
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
-            } 
+            }
             else
-            {                
+            {
                 // If it is the first packet, store the address and load the page in the internal buffer
                 if (msg->body.data[2] == 0)
                 {
@@ -894,10 +894,10 @@ void usbProcessIncoming(uint8_t caller_id)
                     if(checkUserPermission(*temp_node_addr_ptr) == RETURN_OK)
                     {
                         currentNodeWritten = *temp_node_addr_ptr;
-                        loadPageToInternalBuffer(pageNumberFromAddress(currentNodeWritten));                        
+                        loadPageToInternalBuffer(pageNumberFromAddress(currentNodeWritten));
                     }
                 }
-                
+
                 // Check that the address the plugin wants to write is the one stored and that we're not writing more than we're supposed to
                 if ((currentNodeWritten == *temp_node_addr_ptr) && (currentNodeWritten != NODE_ADDR_NULL) && (msg->body.data[2] * (PACKET_EXPORT_SIZE-3) + (datalen - 3) <= NODE_SIZE))
                 {
@@ -906,16 +906,16 @@ void usbProcessIncoming(uint8_t caller_id)
                     {
                         userIdToFlags((uint16_t*)&(msg->body.data[3]), getCurrentUserID());
                     }
-                    
+
                     // Fill the data at the right place
                     flashWriteBuffer(msg->body.data + 3, (NODE_SIZE * nodeNumberFromAddress(currentNodeWritten)) + (msg->body.data[2] * (PACKET_EXPORT_SIZE-3)), datalen - 3);
-                    
+
                     // If we finished writing, flush buffer
                     if (msg->body.data[2] == (NODE_SIZE/(PACKET_EXPORT_SIZE-3)))
                     {
                         flashWriteBufferToPage(pageNumberFromAddress(currentNodeWritten));
                     }
-                    
+
                     plugin_return_value = PLUGIN_BYTE_OK;
                 }
                 else
@@ -928,7 +928,7 @@ void usbProcessIncoming(uint8_t caller_id)
 
         // import media flash contents
         case CMD_IMPORT_MEDIA_START :
-        {            
+        {
             // Set default addresses
             mediaFlashImportPage = GRAPHIC_ZONE_PAGE_START;
             mediaFlashImportOffset = 0;
@@ -968,7 +968,7 @@ void usbProcessIncoming(uint8_t caller_id)
                         temp_conf_text.lines[1] = readStoredStringToBuffer(ID_STRING_ALLOW_UPDATE);
 
                         // TODO: implement sec check !
-                        
+
                         // Allow bundle update if password is not set
                         if ((boot_pwd_set_val != BOOTLOADER_PWDOK_KEY) || ((guiAskForConfirmation(2, &temp_conf_text) == RETURN_OK) && (TRUE == TRUE)))
                         {
@@ -983,7 +983,7 @@ void usbProcessIncoming(uint8_t caller_id)
                             if(boot_pwd_set_val == BOOTLOADER_PWDOK_KEY)
                             {
                                 eeprom_write_word((uint16_t*)EEP_BOOTKEY_ADDR, BOOTLOADER_BOOTKEY);
-                                activateTimer(TIMER_REBOOT, BUNDLE_UPLOAD_TIMEOUT);                                
+                                activateTimer(TIMER_REBOOT, BUNDLE_UPLOAD_TIMEOUT);
                             }
                         }
                         guiGetBackToCurrentScreen();
@@ -993,23 +993,23 @@ void usbProcessIncoming(uint8_t caller_id)
                         plugin_return_value = PLUGIN_BYTE_ERROR;
                     }
                 #endif
-            #else            
+            #else
                 // No check if dev comms
                 #if defined(DEV_PLUGIN_COMMS) || defined(AVR_BOOTLOADER_PROGRAMMING)
                     plugin_return_value = PLUGIN_BYTE_OK;
                     mediaFlashImportApproved = TRUE;
-                #else            
+                #else
                     // Mandatory wait for bruteforce
                     userViewDelay();
-                
+
                     // Compare with our password if it is set
                     if (datalen == PACKET_EXPORT_SIZE)
-                    {                    
+                    {
                         // Prepare asking confirmation screen
                         confirmationText_t temp_conf_text;
                         temp_conf_text.lines[0] = readStoredStringToBuffer(ID_STRING_WARNING);
                         temp_conf_text.lines[1] = readStoredStringToBuffer(ID_STRING_ALLOW_UPDATE);
-                    
+
                         // Allow bundle update if password is not set
                         if ((eeprom_read_byte((uint8_t*)EEP_BOOT_PWD_SET) != BOOTLOADER_PWDOK_KEY) || ((guiAskForConfirmation(2, &temp_conf_text) == RETURN_OK) && (checkMooltipassPassword(msg->body.data, (void*)EEP_BOOT_PWD, PACKET_EXPORT_SIZE) == TRUE)))
                         {
@@ -1019,7 +1019,7 @@ void usbProcessIncoming(uint8_t caller_id)
                         guiGetBackToCurrentScreen();
                     }
                 #endif
-            #endif            
+            #endif
             break;
         }
 
@@ -1058,17 +1058,17 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             plugin_return_value = PLUGIN_BYTE_OK;
             mediaFlashImportApproved = FALSE;
-            
+
             #if defined(MINI_VERSION) && !defined(MINI_CLICK_BETATESTERS_SETUP) && !defined(MINI_CREDENTIAL_MANAGEMENT)
             // At the end of the import media command if the security is set in place, we start the bootloader
             if (eeprom_read_byte((uint8_t*)EEP_BOOT_PWD_SET) == BOOTLOADER_PWDOK_KEY)
-            {                
+            {
                 reboot_platform();
-            } 
+            }
             #endif
             break;
         }
-        
+
         // Set Mooltipass param
         case CMD_SET_MOOLTIPASS_PARM :
         {
@@ -1115,14 +1115,14 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
-        
+
         // Get Mooltipass param
         case CMD_GET_MOOLTIPASS_PARM :
         {
             plugin_return_value = getMooltipassParameterInEeprom(msg->body.data[0]);
             break;
         }
-        
+
         // Get current card CPZ
         case CMD_GET_CUR_CARD_CPZ :
         {
@@ -1130,10 +1130,10 @@ void usbProcessIncoming(uint8_t caller_id)
             if ((getCurrentScreen() == SCREEN_DEFAULT_INSERTED_UNKNOWN) || (getSmartCardInsertedUnlocked() == TRUE))
             {
                 uint8_t temp_buffer[SMARTCARD_CPZ_LENGTH];
-                
+
                 // Read code protected zone
                 readCodeProtectedZone(temp_buffer);
-                
+
                 // Send it to the app
                 usbSendMessage(CMD_GET_CUR_CARD_CPZ, sizeof(temp_buffer), (void*)temp_buffer);
                 return;
@@ -1144,7 +1144,7 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
-        
+
         // Reset smartcard
         case CMD_RESET_CARD :
         {
@@ -1172,28 +1172,28 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
-        
+
         // Unlock the card using a PIN sent through USB (only used as last resort for standard version, if screen breaks!)
         #ifndef MINI_VERSION
         case CMD_UNLOCK_WITH_PIN :
         {
             uint16_t* temp_uint_ptr = (uint16_t*)msg->body.data;
-            
+
             // Check that 2 bytes are present and that we're in the right screen
             if ((datalen == 2) && (getCurrentScreen() == SCREEN_DEFAULT_INSERTED_LCK) && (cardDetectedRoutine() == RETURN_MOOLTIPASS_USER) && (guiAskForConfirmation(1, (confirmationText_t*)readStoredStringToBuffer(ID_STRING_PIN_COMPUTER)) == RETURN_OK) && (validCardDetectedFunction(temp_uint_ptr) == RETURN_VCARD_OK))
             {
                 guiSetCurrentScreen(SCREEN_DEFAULT_INSERTED_NLCK);
                 plugin_return_value = PLUGIN_BYTE_OK;
-            } 
+            }
             else
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
-            }        
-            guiGetBackToCurrentScreen();    
+            }
+            guiGetBackToCurrentScreen();
             break;
         }
         #endif
-        
+
         // Add current unknown smartcard
         case CMD_ADD_UNKNOWN_CARD :
         {
@@ -1202,10 +1202,10 @@ void usbProcessIncoming(uint8_t caller_id)
             {
                 uint8_t temp_buffer[AES_KEY_LENGTH/8];
                 uint8_t new_user_id;
-                
+
                 // Read code protected zone
                 readCodeProtectedZone(temp_buffer);
-                
+
                 // Check that the provided CPZ is the current one, ask the user to unlock the card and check that we can add the user
                 activityDetectedRoutine();
                 if ((memcmp(temp_buffer, msg->body.data, SMARTCARD_CPZ_LENGTH) == 0) && (guiCardUnlockingProcess() == RETURN_OK) && (addNewUserForExistingCard(&msg->body.data[SMARTCARD_CPZ_LENGTH], &new_user_id) == RETURN_OK))
@@ -1220,7 +1220,7 @@ void usbProcessIncoming(uint8_t caller_id)
                 }
                 else
                 {
-                    plugin_return_value = PLUGIN_BYTE_ERROR;                    
+                    plugin_return_value = PLUGIN_BYTE_ERROR;
                 }
                 guiGetBackToCurrentScreen();
             }
@@ -1230,7 +1230,7 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
-        
+
         // Read card login
         case CMD_READ_CARD_LOGIN :
         {
@@ -1240,14 +1240,14 @@ void usbProcessIncoming(uint8_t caller_id)
                 readMooltipassWebsiteLogin(temp_data);
                 usbSendMessage(CMD_READ_CARD_LOGIN, sizeof(temp_data), (void*)temp_data);
                 return;
-            } 
+            }
             else
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
             }
             break;
         }
-        
+
         // Read card stored password
         case CMD_READ_CARD_PASS :
         {
@@ -1260,20 +1260,20 @@ void usbProcessIncoming(uint8_t caller_id)
                     usbSendMessage(CMD_READ_CARD_PASS, sizeof(temp_data), (void*)temp_data);
                     guiGetBackToCurrentScreen();
                     return;
-                } 
+                }
                 else
                 {
                     guiGetBackToCurrentScreen();
                     plugin_return_value = PLUGIN_BYTE_ERROR;
                 }
-            } 
+            }
             else
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
             }
             break;
         }
-        
+
         // Set card login
         case CMD_SET_CARD_LOGIN :
         {
@@ -1283,7 +1283,7 @@ void usbProcessIncoming(uint8_t caller_id)
                 {
                     // Temp buffer for application zone 2
                     uint8_t temp_az2[SMARTCARD_AZ_BIT_LENGTH/8];
-                    
+
                     // Read Application Zone 2
                     readApplicationZone2(temp_az2);
                     // Erase Application Zone 2
@@ -1292,10 +1292,10 @@ void usbProcessIncoming(uint8_t caller_id)
                     memcpy(temp_az2 + (SMARTCARD_MTP_LOGIN_OFFSET/8), msg->body.data, datalen);
                     // Write the new data in the card
                     writeApplicationZone2(temp_az2);
-                    
+
                     // Return OK
                     plugin_return_value = PLUGIN_BYTE_OK;
-                } 
+                }
                 else
                 {
                     plugin_return_value = PLUGIN_BYTE_ERROR;
@@ -1308,7 +1308,7 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
-        
+
         // Set card stored password
         case CMD_SET_CARD_PASS :
         {
@@ -1318,7 +1318,7 @@ void usbProcessIncoming(uint8_t caller_id)
                 {
                     // Temp buffer for application zone 1
                     uint8_t temp_az1[SMARTCARD_AZ_BIT_LENGTH/8];
-                    
+
                     // Read Application Zone 1
                     readApplicationZone1(temp_az1);
                     // Erase Application Zone 1
@@ -1327,10 +1327,10 @@ void usbProcessIncoming(uint8_t caller_id)
                     memcpy(temp_az1 + (SMARTCARD_MTP_PASS_OFFSET/8), msg->body.data, datalen);
                     // Write the new data in the card
                     writeApplicationZone1(temp_az1);
-                    
+
                     // Return OK
                     plugin_return_value = PLUGIN_BYTE_OK;
-                } 
+                }
                 else
                 {
                     plugin_return_value = PLUGIN_BYTE_ERROR;
@@ -1343,7 +1343,7 @@ void usbProcessIncoming(uint8_t caller_id)
             }
             break;
         }
-        
+
         // Get 32 random bytes
         case CMD_GET_RANDOM_NUMBER :
         {
@@ -1351,8 +1351,8 @@ void usbProcessIncoming(uint8_t caller_id)
             fillArrayWithRandomBytes(randomBytes, 32);
             usbSendMessage(CMD_GET_RANDOM_NUMBER, 32, randomBytes);
             return;
-        }  
-        
+        }
+
         // Set current date
         case CMD_SET_DATE :
         {
@@ -1360,12 +1360,12 @@ void usbProcessIncoming(uint8_t caller_id)
             plugin_return_value = PLUGIN_BYTE_OK;
             setCurrentDate(*temp_uint_ptr);
             break;
-        }      
-   
+        }
+
         // Set Mooltipass UID
         case CMD_SET_UID :
         {
-            #ifdef MINI_VERSION            
+            #ifdef MINI_VERSION
                 // The packet should contain the UID request key and the UID
                 if ((datalen == (UID_REQUEST_KEY_SIZE + UID_SIZE + BOOTKEY_SIZE)) && (eeprom_read_byte((uint8_t*)EEP_UID_REQUEST_KEY_SET_ADDR) != UID_REQUEST_KEY_OK_KEY))
                 {
@@ -1395,7 +1395,7 @@ void usbProcessIncoming(uint8_t caller_id)
             #endif
             break;
         }
-        
+
         // Get Mooltipass UID
         case CMD_GET_UID :
         {
@@ -1409,7 +1409,7 @@ void usbProcessIncoming(uint8_t caller_id)
                     eeprom_read_block((void*)mooltipass_uid, (void*)EEP_UID_ADDR, sizeof(mooltipass_uid));
                     usbSendMessage(CMD_GET_UID, sizeof(mooltipass_uid), mooltipass_uid);
                     return;
-                } 
+                }
                 else
                 {
                     plugin_return_value = PLUGIN_BYTE_ERROR;
@@ -1420,8 +1420,8 @@ void usbProcessIncoming(uint8_t caller_id)
                 plugin_return_value = PLUGIN_BYTE_ERROR;
             }
             break;
-        }       
-        
+        }
+
         // set password bootkey
         case CMD_SET_BOOTLOADER_PWD :
         {
@@ -1449,11 +1449,11 @@ void usbProcessIncoming(uint8_t caller_id)
             findAvailableUserId(msg->body.data, &plugin_return_value);
             break;
         }
-        
+
         #ifndef MINI_VERSION
         // Jump to bootloader
         case CMD_JUMP_TO_BOOTLOADER :
-        {            
+        {
             // Mandatory wait for bruteforce
             userViewDelay();
 
@@ -1461,7 +1461,7 @@ void usbProcessIncoming(uint8_t caller_id)
             confirmationText_t temp_conf_text;
             temp_conf_text.lines[0] = readStoredStringToBuffer(ID_STRING_WARNING);
             temp_conf_text.lines[1] = readStoredStringToBuffer(ID_STRING_ALLOW_UPDATE);
-                
+
             if ((eeprom_read_byte((uint8_t*)EEP_BOOT_PWD_SET) == BOOTLOADER_PWDOK_KEY) && (datalen == PACKET_EXPORT_SIZE) && (guiAskForConfirmation(2, &temp_conf_text) == RETURN_OK) && (checkMooltipassPassword(msg->body.data, (void*)EEP_BOOT_PWD, PACKET_EXPORT_SIZE) == TRUE))
             {
                 // Write "jump to bootloader" key in eeprom
@@ -1478,7 +1478,7 @@ void usbProcessIncoming(uint8_t caller_id)
                 sei();
                 while(1);
             }
-                
+
             // Return to last screen
             guiGetBackToCurrentScreen();
         }
@@ -1550,21 +1550,21 @@ void usbProcessIncoming(uint8_t caller_id)
             #endif
             return;
         }
-        
+
         case CMD_CLONE_SMARTCARD :
         {
             uint16_t pin_code = SMARTCARD_DEFAULT_PIN;
             if (cloneSmartCardProcess(&pin_code) == RETURN_OK)
             {
                 plugin_return_value = PLUGIN_BYTE_OK;
-            } 
+            }
             else
             {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
             }
             break;
         }
-        
+
         case CMD_MINI_FRAME_BUF_DATA:
         {
             #ifdef MINI_VERSION
@@ -1584,7 +1584,7 @@ void usbProcessIncoming(uint8_t caller_id)
                 scanAndGetDoubleZTap(TRUE);
             }
             #endif
-            break;       
+            break;
         }
 
         case CMD_SET_FONT :
@@ -1603,7 +1603,7 @@ void usbProcessIncoming(uint8_t caller_id)
             #endif
 
             return;
-        }            
+        }
 
         case CMD_USB_KEYBOARD_PRESS:
             plugin_return_value = PLUGIN_BYTE_OK;
@@ -1612,7 +1612,7 @@ void usbProcessIncoming(uint8_t caller_id)
                 usbKeyboardPress(msg->body.data[0], msg->body.data[1]);
             }
             else
-            { 
+            {
                 plugin_return_value = PLUGIN_BYTE_ERROR;
             }
             break;
@@ -1629,8 +1629,7 @@ void usbProcessIncoming(uint8_t caller_id)
 
         default :   return;
     }
-    
+
     // Return an answer that was defined before calling break
     usbSendMessage(datacmd, 1, &plugin_return_value);
 }
-

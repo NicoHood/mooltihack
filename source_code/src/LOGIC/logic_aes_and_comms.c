@@ -168,7 +168,7 @@ uint16_t searchForServiceName(uint8_t* name, uint8_t mode, uint8_t type)
 {
     uint16_t next_node_addr;
     int8_t compare_result;
-    
+
     // If it is of credential type, use the LUT to accelerate things
     if (type == SERVICE_CRED_TYPE)
     {
@@ -178,7 +178,7 @@ uint16_t searchForServiceName(uint8_t* name, uint8_t mode, uint8_t type)
     {
         next_node_addr = getStartingDataParentAddress();
     }
-    
+
     if (next_node_addr == NODE_ADDR_NULL)
     {
         return NODE_ADDR_NULL;
@@ -190,17 +190,17 @@ uint16_t searchForServiceName(uint8_t* name, uint8_t mode, uint8_t type)
         {
             // Read parent node
             readParentNode(&temp_pnode, next_node_addr);
-            
+
             // Compare its service name with the name that was provided
             if (mode == COMPARE_MODE_MATCH)
             {
                 compare_result = strncmp((char*)name, (char*)temp_pnode.service, NODE_CHILD_SIZE_OF_LOGIN);
-                
+
                 if (compare_result == 0)
                 {
                     // Result found
                     return next_node_addr;
-                } 
+                }
                 else if (compare_result < 0)
                 {
                     // Nodes are alphabetically sorted, escape if we went over
@@ -214,11 +214,11 @@ uint16_t searchForServiceName(uint8_t* name, uint8_t mode, uint8_t type)
             next_node_addr = temp_pnode.nextParentAddress;
         }
         while (next_node_addr != NODE_ADDR_NULL);
-        
+
         if(mode == COMPARE_MODE_COMPARE)
         {
             // We didn't find the service, return first node
-            return getStartingParentAddress();            
+            return getStartingParentAddress();
         }
         else
         {
@@ -236,23 +236,23 @@ uint16_t searchForServiceName(uint8_t* name, uint8_t mode, uint8_t type)
 uint16_t searchForLoginInGivenParent(uint16_t parent_addr, uint8_t* name)
 {
     uint16_t next_node_addr;
-    
+
     // Read parent node and get first child address
-    readParentNode(&temp_pnode, parent_addr);    
+    readParentNode(&temp_pnode, parent_addr);
     next_node_addr = temp_pnode.nextChildAddress;
-    
+
     // Check that there's actually a child node
     if (next_node_addr == NODE_ADDR_NULL)
     {
         return NODE_ADDR_NULL;
     }
-    
+
     // Start going through the nodes
     do
     {
         // Read child node
         readChildNode(&temp_cnode, next_node_addr);
-        
+
         // Compare login with the provided name
         if (strncmp((char*)temp_cnode.login, (char*)name, NODE_CHILD_SIZE_OF_LOGIN) == 0)
         {
@@ -261,7 +261,7 @@ uint16_t searchForLoginInGivenParent(uint16_t parent_addr, uint8_t* name)
         next_node_addr = temp_cnode.nextChildAddress;
     }
     while (next_node_addr != NODE_ADDR_NULL);
-    
+
     // We didn't find the login
     return NODE_ADDR_NULL;
 }
@@ -274,10 +274,10 @@ void ctrPreEncryptionTasks(void)
     uint16_t carry = CTR_FLASH_MIN_INCR;
     uint8_t temp_buffer[USER_CTR_SIZE];
     int8_t i;
-    
+
     // Read CTR stored in flash
     readProfileCtr(temp_buffer);
-    
+
     // If it is the same value, increment it by CTR_FLASH_MIN_INCR and store it in flash
     if (memcmp(temp_buffer, nextCtrVal, USER_CTR_SIZE) == 0)
     {
@@ -352,16 +352,16 @@ void computeAndDisplayBlockSizeEncryptionResult(uint8_t* aes_key, uint8_t* data,
 void decrypt32bBlockOfDataAndClearCTVFlag(uint8_t* data, uint8_t* ctr)
 {
     uint8_t temp_buffer[AES256_CTR_LENGTH];
-    
+
     // Preventing side channel attacks: only send the password after a given amount of time
     activateTimer(TIMER_CREDENTIALS, AES_ENCR_DECR_TIMER_VAL);
-    
+
     // AES decryption: xor our nonce with the ctr value, set the result, then decrypt
     memcpy((void*)temp_buffer, (void*)current_nonce, AES256_CTR_LENGTH);
     aesXorVectors(temp_buffer + (AES256_CTR_LENGTH-USER_CTR_SIZE), ctr, USER_CTR_SIZE);
     aes256CtrSetIv(&aesctx, temp_buffer, AES256_CTR_LENGTH);
     aes256CtrDecrypt(&aesctx, data, AES_ROUTINE_ENC_SIZE);
-    
+
     // Wait for credential timer to fire (we wanted to clear credential_timer_valid flag anyway)
     while (hasTimerExpired(TIMER_CREDENTIALS, FALSE) == TIMER_RUNNING);
 }
@@ -374,7 +374,7 @@ void decrypt32bBlockOfDataAndClearCTVFlag(uint8_t* data, uint8_t* ctr)
 void encrypt32bBlockOfDataAndClearCTVFlag(uint8_t* data, uint8_t* ctr)
 {
     uint8_t temp_buffer[AES256_CTR_LENGTH];
-    
+
     // Preventing side channel attacks: only send the return after a given amount of time
     activateTimer(TIMER_CREDENTIALS, AES_ENCR_DECR_TIMER_VAL);
 
@@ -401,7 +401,7 @@ RET_TYPE setCurrentContext(uint8_t* name, uint8_t type)
 {
     // Look for name inside our flash
     context_parent_node_addr = searchForServiceName(name, COMPARE_MODE_MATCH, type);
-    
+
     // Clear all flags
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
     {
@@ -413,14 +413,14 @@ RET_TYPE setCurrentContext(uint8_t* name, uint8_t type)
         activateTimer(TIMER_CREDENTIALS, 0);
         currently_writing_first_block = FALSE;
     }
-    
+
     // Do we know this context ?
     if ((context_parent_node_addr != NODE_ADDR_NULL) && (smartcard_inserted_unlocked == TRUE))
     {
         if (type == SERVICE_CRED_TYPE)
         {
             context_valid_flag = TRUE;
-        } 
+        }
         else
         {
             data_context_valid_flag = TRUE;
@@ -445,13 +445,13 @@ RET_TYPE setCurrentContext(uint8_t* name, uint8_t type)
 RET_TYPE addNewContext(uint8_t* name, uint8_t length, uint8_t type)
 {
     RET_TYPE ret_val = RETURN_NOK;
-    
+
     // Check if the context doesn't already exist
     if ((smartcard_inserted_unlocked == FALSE) || (searchForServiceName(name, COMPARE_MODE_MATCH, type) != NODE_ADDR_NULL))
     {
         return RETURN_NOK;
     }
-    
+
     // Prepare domain approval screen
     if (type == SERVICE_CRED_TYPE)
     {
@@ -462,23 +462,23 @@ RET_TYPE addNewContext(uint8_t* name, uint8_t length, uint8_t type)
         conf_text.lines[0] = readStoredStringToBuffer(ID_STRING_CONF_NEWDATA);
     }
     conf_text.lines[1] = (char*)name;
-    
+
     // Ask for user approval, flash screen
     if(guiAskForConfirmation(0xF0 | 2, &conf_text) == RETURN_OK)
     {
         // Display processing screen
         guiDisplayProcessingScreen();
-        
+
         // Copy service name inside the parent node
         memcpy((void*)temp_pnode.service, (void*)name, length);
-        
+
         // Create parent node for service
         if (createParentNode(&temp_pnode, type) == RETURN_OK)
         {
             ret_val = RETURN_OK;
         }
     }
-    
+
     #ifdef ENABLE_CREDENTIAL_MANAGEMENT
     /* disable menu animation when managing credentials as we have more questions */
     if(ondevice_cred_mgmt_action == ONDEVICE_CRED_MGMT_ACTION_NONE)
@@ -511,13 +511,13 @@ RET_TYPE getLoginForContext(char* buffer)
         {
             // Read context parent node
             readParentNode(&temp_pnode, context_parent_node_addr);
-            
+
             // Check it actually has a child!
             if (temp_pnode.nextChildAddress == NODE_ADDR_NULL)
             {
                 return RETURN_NOK;
             }
-            
+
             // See if a username has already been specified
             if (buffer[HID_LEN_FIELD] != 0)
             {
@@ -530,7 +530,7 @@ RET_TYPE getLoginForContext(char* buffer)
                 {
                     // Payload length correct, check that the specified login actually exists...
                     selected_login_child_node_addr = searchForLoginInGivenParent(context_parent_node_addr, (uint8_t*)(buffer + HID_DATA_START));
-                    
+
                     // Requested login exists, ask for acknowledgment from user...
                     if (selected_login_child_node_addr != NODE_ADDR_NULL)
                     {
@@ -545,7 +545,7 @@ RET_TYPE getLoginForContext(char* buffer)
                         conf_text.lines[1] = readStoredStringToBuffer(ID_STRING_SEND_PASS_FOR);
                         conf_text.lines[2] = (char*)(buffer + HID_DATA_START);
                         #endif
-                        
+
                         // If doesn't exist, ask user for confirmation to add to flash
                         #if defined(HARDWARE_OLIVIER_V1)
                         if (guiAskForConfirmation(4, &conf_text) == RETURN_OK)
@@ -563,22 +563,22 @@ RET_TYPE getLoginForContext(char* buffer)
                         }
                     }
                 }
-            } 
+            }
             else
             {
                 // Ask the user to a pick a child
                 selected_login_child_node_addr = guiAskForLoginSelect(&temp_pnode, &temp_cnode, context_parent_node_addr, FALSE);
                 guiGetBackToCurrentScreen();
-                
+
                 // If a valid child node was selected
                 if (selected_login_child_node_addr != NODE_ADDR_NULL)
                 {
                     selected_login_flag = TRUE;
                     activateTimer(TIMER_CREDENTIALS, CREDENTIAL_TIMER_VALIDITY);
                 }
-            }            
+            }
         }
-        
+
         // If the user just approved!
         if ((hasTimerExpired(TIMER_CREDENTIALS, FALSE) == TIMER_RUNNING) && (selected_login_flag == TRUE))
         {
@@ -604,13 +604,13 @@ RET_TYPE getPasswordForContext(char* buffer)
     {
         // Fetch password from selected login and send it over USB
         readChildNode(&temp_cnode, selected_login_child_node_addr);
-        
+
         // Call the password decryption function, which also clears the credential_timer_valid flag
         decrypt32bBlockOfDataAndClearCTVFlag(temp_cnode.password, temp_cnode.ctr);
         temp_cnode.password[NODE_CHILD_SIZE_OF_PASSWORD-1] = 0;
         strcpy((char*)buffer, (char*)temp_cnode.password);
         memset((void*)temp_cnode.password, 0x00, NODE_CHILD_SIZE_OF_PASSWORD);
-        
+
         // Timer fired, return
         return RETURN_OK;
     }
@@ -630,10 +630,10 @@ RET_TYPE getDescriptionForContext(char* buffer)
     {
         // Fetch description from selected login and send it over USB
         readChildNode(&temp_cnode, selected_login_child_node_addr);
-        
+
         // Store the description, guaranteed to be null terminated by readchildnode function
         strcpy((char*)buffer, (char*)temp_cnode.description);
-        
+
         // Return
         return RETURN_OK;
     }
@@ -652,7 +652,7 @@ RET_TYPE getDescriptionForContext(char* buffer)
 RET_TYPE setLoginForContext(uint8_t* name, uint8_t length)
 {
     RET_TYPE ret_val = RETURN_NOK;
-    
+
     if (context_valid_flag == FALSE)
     {
         return RETURN_NOK;
@@ -665,10 +665,10 @@ RET_TYPE setLoginForContext(uint8_t* name, uint8_t length)
             selected_login_flag = FALSE;
             activateTimer(TIMER_CREDENTIALS, 0);
         }
-        
+
         // Look for given login in the flash
         selected_login_child_node_addr = searchForLoginInGivenParent(context_parent_node_addr, name);
-        
+
         if (selected_login_child_node_addr != NODE_ADDR_NULL)
         {
             selected_login_flag = TRUE;
@@ -687,7 +687,7 @@ RET_TYPE setLoginForContext(uint8_t* name, uint8_t length)
                 conf_text.lines[1] = readStoredStringToBuffer(ID_STRING_ADDUSERNAME);
                 conf_text.lines[2] = (char*)name;
             #endif
-            
+
             // If doesn't exist, ask user for confirmation to add to flash
             #if defined(HARDWARE_OLIVIER_V1)
             if (guiAskForConfirmation(4, &conf_text) == RETURN_OK)
@@ -697,16 +697,16 @@ RET_TYPE setLoginForContext(uint8_t* name, uint8_t length)
             {
                 // Display processing screen
                 guiDisplayProcessingScreen();
-                
+
                 // Set temp cnode to zeroes: we're not setting a random password as a plain text attack would suggest the attacker having control on the device
                 // So instead of not setting a password, he'd just put a 31 known plaintext...
                 memset((void*)&temp_cnode, 0x00, NODE_SIZE);
                 encrypt32bBlockOfDataAndClearCTVFlag(temp_cnode.password, temp_cnode.ctr);
                 memcpy((void*)temp_cnode.login, (void*)name, length);
-                
+
                 // Add "created by plugin" message in the description field
                 strcpy((char*)temp_cnode.description, readStoredStringToBuffer(ID_STRING_CREATEDBYPLUG));
-                
+
                 // Create child node
                 if(createChildNode(context_parent_node_addr, &temp_cnode) == RETURN_OK)
                 {
@@ -718,7 +718,7 @@ RET_TYPE setLoginForContext(uint8_t* name, uint8_t length)
             }
         }
     }
-    
+
     #ifdef ENABLE_CREDENTIAL_MANAGEMENT
     /* disable menu animation when managing credentials as we have more questions */
     if(ondevice_cred_mgmt_action == ONDEVICE_CRED_MGMT_ACTION_NONE)
@@ -812,10 +812,10 @@ RET_TYPE setPasswordForContext(uint8_t* password, uint8_t length)
 
         // Read child node
         readChildNode(&temp_cnode, selected_login_child_node_addr);
-        
+
         // Put random bytes after the final 0
         fillArrayWithRandomBytes(password + length, NODE_CHILD_SIZE_OF_PASSWORD - length);
-        
+
         // Prepare password changing approval text
         #if defined(HARDWARE_OLIVIER_V1)
             conf_text.lines[0] = readStoredStringToBuffer(ID_STRING_CHANGEPASSFOR);
@@ -826,8 +826,8 @@ RET_TYPE setPasswordForContext(uint8_t* password, uint8_t length)
             conf_text.lines[0] = (char*)temp_pnode.service;
             conf_text.lines[1] = readStoredStringToBuffer(ID_STRING_CHANGEPASSFOR);
             conf_text.lines[2] = (char*)temp_cnode.login;
-        #endif        
-        
+        #endif
+
         // Ask for password changing approval
         #if defined(HARDWARE_OLIVIER_V1)
         if (guiAskForConfirmation(4, &conf_text) == RETURN_OK)
@@ -848,7 +848,7 @@ RET_TYPE setPasswordForContext(uint8_t* password, uint8_t length)
 
             // Encrypt the password
             encrypt32bBlockOfDataAndClearCTVFlag(password, temp_ctr);
-            
+
             // Update child node to store password
             if(updateChildNodePassword(&temp_cnode, selected_login_child_node_addr, password, temp_ctr) != RETURN_OK)
             {
@@ -857,7 +857,7 @@ RET_TYPE setPasswordForContext(uint8_t* password, uint8_t length)
 
             // Inform that the db has changed
             userDBChangedActions();
-            
+
             return RETURN_OK;
         }
         else
@@ -887,7 +887,7 @@ RET_TYPE setPasswordForContext(uint8_t* password, uint8_t length)
 RET_TYPE addDataForDataContext(uint8_t* data, uint8_t last_packet_flag)
 {
     uint8_t temp_ctr[3];
-    
+
     if (data_context_valid_flag == FALSE)
     {
         // Login not set
@@ -902,7 +902,7 @@ RET_TYPE addDataForDataContext(uint8_t* data, uint8_t last_packet_flag)
             // Prepare data adding approval text
             conf_text.lines[0] = readStoredStringToBuffer(ID_STRING_ADD_DATA_FOR);
             conf_text.lines[1] = (char*)temp_pnode.service;
-            
+
             // Ask for data adding approval
             if (guiAskForConfirmation(2, &conf_text) == RETURN_OK)
             {
@@ -912,10 +912,10 @@ RET_TYPE addDataForDataContext(uint8_t* data, uint8_t last_packet_flag)
                 current_adding_data_flag = TRUE;
                 currently_adding_data_cntr = 0;
                 userDBChangedActions();
-            }            
-            guiGetBackToCurrentScreen(); 
+            }
+            guiGetBackToCurrentScreen();
         }
-        
+
         // Check that we approved data adding, that we're not adding too much data in the node and that the encrypt length is a multiple of 16 if we are not writing the last block
         if (current_adding_data_flag == FALSE)
         {
@@ -933,7 +933,7 @@ RET_TYPE addDataForDataContext(uint8_t* data, uint8_t last_packet_flag)
             {
                 memcpy((void*)temp_pnode.startDataCtr, temp_ctr, 3);
             }
-            
+
             // Check if we need to write the node in flash
             currently_adding_data_cntr += 32;
             if ((currently_adding_data_cntr == DATA_NODE_DATA_LENGTH) || (last_packet_flag != FALSE))
@@ -949,7 +949,7 @@ RET_TYPE addDataForDataContext(uint8_t* data, uint8_t last_packet_flag)
                 currently_writing_first_block = FALSE;
                 currently_adding_data_cntr = 0;
             }
-            
+
             // If we are writing the last block, set the flags
             if (last_packet_flag != FALSE)
             {
@@ -957,7 +957,7 @@ RET_TYPE addDataForDataContext(uint8_t* data, uint8_t last_packet_flag)
                 temp_pnode.nextChildAddress = NODE_ADDR_NULL+1;
                 current_adding_data_flag = FALSE;
             }
-            
+
             return RETURN_OK;
         }
     }
@@ -975,9 +975,9 @@ RET_TYPE get32BytesDataForCurrentService(uint8_t* buffer)
         {
             // Context invalid
             return RETURN_NOK;
-        } 
+        }
         else
-        {            
+        {
             // Credential timer off, ask for user to approve
             if (hasTimerExpired(TIMER_CREDENTIALS, FALSE) == TIMER_EXPIRED)
             {
@@ -985,19 +985,19 @@ RET_TYPE get32BytesDataForCurrentService(uint8_t* buffer)
                 readParentNode(&temp_pnode, context_parent_node_addr);
                 memcpy(dataNodeCtrVal, temp_pnode.startDataCtr, 3);
                 next_data_node_addr = temp_pnode.nextChildAddress;
-                
+
                 // No child... ask for permission
                 // Prepare data adding approval text
                 conf_text.lines[0] = readStoredStringToBuffer(ID_STRING_GET_DATA_FOR);
                 conf_text.lines[1] = (char*)temp_pnode.service;
-                
+
                 // Ask for data adding approval
                 if (guiAskForConfirmation(2, &conf_text) == RETURN_OK)
                 {
                     activateTimer(TIMER_CREDENTIALS, CREDENTIAL_TIMER_VALIDITY);
                     currently_reading_data_cntr = 0;
                 }
-                guiGetBackToCurrentScreen(); 
+                guiGetBackToCurrentScreen();
             }
             if (hasTimerExpired(TIMER_CREDENTIALS, FALSE) == TIMER_RUNNING)
             {
@@ -1013,32 +1013,32 @@ RET_TYPE get32BytesDataForCurrentService(uint8_t* buffer)
                     else
                     {
                         readNode((gNode*)temp_dnode_ptr, next_data_node_addr);
-                        next_data_node_addr = temp_dnode_ptr->nextDataAddress; 
-                        
+                        next_data_node_addr = temp_dnode_ptr->nextDataAddress;
+
                         // Check that we are actually reading something valid...
                         if(validBitFromFlags(temp_dnode_ptr->flags) == NODE_VBIT_INVALID)
                         {
                             return RETURN_NOK;
-                        }                  
+                        }
                     }
                 }
-                
+
                 // Call the password decryption function, which also clears the credential_timer_valid flag
                 decrypt32bBlockOfDataAndClearCTVFlag(&temp_dnode_ptr->data[currently_reading_data_cntr], dataNodeCtrVal);
                 activateTimer(TIMER_CREDENTIALS, CREDENTIAL_TIMER_VALIDITY);
                 // Increment ctr value
                 aesIncrementCtr(dataNodeCtrVal, USER_CTR_SIZE);
-                aesIncrementCtr(dataNodeCtrVal, USER_CTR_SIZE);                
+                aesIncrementCtr(dataNodeCtrVal, USER_CTR_SIZE);
                 // Copy in our buffer the data
                 memcpy(buffer, (void*)&temp_dnode_ptr->data[currently_reading_data_cntr], 32);
-                                
+
                 // Increment our counter
                 currently_reading_data_cntr += 32;
                 if (currently_reading_data_cntr >= (temp_dnode_ptr->flags & 0x00FF))
                 {
                     currently_reading_data_cntr = 0;
                 }
-                
+
                 return RETURN_OK;
             }
             else
@@ -1072,10 +1072,10 @@ RET_TYPE checkPasswordForContext(uint8_t* password)
             // Check password in Flash
             // Read child node
             readChildNode(&temp_cnode, selected_login_child_node_addr);
-            
+
             // Call the password decryption function, which also clears the credential_timer_valid flag
             decrypt32bBlockOfDataAndClearCTVFlag(temp_cnode.password, temp_cnode.ctr);
-            
+
             if (strncmp((char*)temp_cnode.password, (char*)password, NODE_CHILD_SIZE_OF_PASSWORD) == 0)
             {
                 memset((void*)temp_cnode.password, 0x00, NODE_CHILD_SIZE_OF_PASSWORD);
@@ -1098,16 +1098,16 @@ RET_TYPE checkPasswordForContext(uint8_t* password)
 *   \param  RETURN_OK or RETURN_BACK
 */
 RET_TYPE askUserForLoginAndPasswordKeybOutput(uint16_t child_address, char* service_name)
-{    
+{
     confirmationText_t temp_conf_text;
-    
+
     // If the user picked a credential set
     if (child_address != NODE_ADDR_NULL)
     {
         // Read child node
         readChildNode(&temp_cnode, child_address);
         temp_conf_text.lines[0] = service_name;
-        
+
         #ifdef MINI_VERSION
         while(TRUE)
         {
@@ -1131,7 +1131,7 @@ RET_TYPE askUserForLoginAndPasswordKeybOutput(uint16_t child_address, char* serv
                     {
                         return RETURN_BACK;
                     }
-                } 
+                }
                 else
                 {
                     temp_conf_text.lines[1] = readStoredStringToBuffer(ID_STRING_SHOW_LOGINQ);
@@ -1146,7 +1146,7 @@ RET_TYPE askUserForLoginAndPasswordKeybOutput(uint16_t child_address, char* serv
                     }
                 }
             }
-        
+
             decrypt32bBlockOfDataAndClearCTVFlag(temp_cnode.password, temp_cnode.ctr);
             temp_cnode.password[sizeof(temp_cnode.password)-1] = 0;
             // Ask the user if he wants to output the password
@@ -1233,7 +1233,7 @@ RET_TYPE askUserForLoginAndPasswordKeybOutput(uint16_t child_address, char* serv
                 }
             }
         }
-        
+
         decrypt32bBlockOfDataAndClearCTVFlag(temp_cnode.password, temp_cnode.ctr);
         // Ask the user if he wants to output the password
         if (isUsbConfigured())
@@ -1353,7 +1353,7 @@ void loginSelectLogic(void)
                     if ((temp_cnode.prevChildAddress == NODE_ADDR_NULL) && (temp_cnode.nextChildAddress == NODE_ADDR_NULL))
                     {
                         state_machine = 0;
-                    } 
+                    }
                     else
                     {
                         state_machine = 1;
@@ -1497,7 +1497,7 @@ uint16_t askUserToSelectCharset(uint16_t original_flags)
         while ((flags & NODE_F_CHILD_USERFLAGS_MASK) == 0x00); /* ask again until the user picks at least one charset */
 
         return flags;
-    } 
+    }
     else
     {
         return original_flags;

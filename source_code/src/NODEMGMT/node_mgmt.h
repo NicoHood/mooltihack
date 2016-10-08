@@ -254,7 +254,7 @@ static inline uint8_t nodeNumberFromAddress(uint16_t addr)
 }
 
 /**
- * Gets the node valid bit from flags  
+ * Gets the node valid bit from flags
  * @param   flags           The flags field of a node
  * @return  valid bit       as uint8_t
  * @note    No error checking is performed
@@ -265,7 +265,7 @@ static inline uint8_t validBitFromFlags(uint16_t flags)
 }
 
 /**
- * Gets the user id from flags  
+ * Gets the user id from flags
  * @param   flags           The flags field of a node
  * @return  user id         as uint8_t
  * @note    No error checking is performed
@@ -276,7 +276,7 @@ static inline uint8_t userIdFromFlags(uint16_t flags)
 }
 
 /**
- * Sets the user id to flags  
+ * Sets the user id to flags
  * @param   flags           The flags field of a node
  * @param   uid             The user id to set in flags (0 up to NODE_MAX_UID)
  * @return  Does not return
