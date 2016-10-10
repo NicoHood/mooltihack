@@ -209,11 +209,7 @@ void miniOledWriteCommand(uint8_t* data, uint8_t nbBytes)
 {
     PORT_OLED_SS &= ~(1 << PORTID_OLED_SS);
     PORT_OLED_DnC &= ~(1 << PORTID_OLED_DnC);
-    while(nbBytes--)
-    {
-        spi_usart_transfer_8(*data);
-        data++;
-    }
+    spi_usart_write(data, nbBytes);
     PORT_OLED_SS |= (1 << PORTID_OLED_SS);
 }
 
@@ -225,7 +221,7 @@ void miniOledWriteSimpleCommand(uint8_t reg)
 {
     PORT_OLED_SS &= ~(1 << PORTID_OLED_SS);
     PORT_OLED_DnC &= ~(1 << PORTID_OLED_DnC);
-    spi_usart_transfer_8(reg);
+    spi_usart_write_8(reg);
     PORT_OLED_SS |= (1 << PORTID_OLED_SS);
 }
 
