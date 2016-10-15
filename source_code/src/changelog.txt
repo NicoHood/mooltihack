@@ -12,7 +12,9 @@ V1.2:
 - added "SE" to vendor id string, required by USB spec
 - changed USB keyboard Usage Maximum to allow win key
 - allowing by default credentials cancel requests
+- copying CPZ during card cloning process
 - display flip based on accelerometer
+- USB command to lock the mini
 - back functionality on mini
 - set description command
 

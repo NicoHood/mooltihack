@@ -105,26 +105,45 @@ RET_TYPE handleSmartcardInserted(void)
         // This a valid user smart card, we call a dedicated function for the user to unlock the card
         if (temp_return == RETURN_VCARD_OK)
         {
-            uint8_t loginString[SMARTCARD_MTP_LOGIN_LENGTH/8];
+            uint8_t loginString[NODE_CHILD_SIZE_OF_LOGIN];
             
             // As we do buffer reuse, double check it here for possible evolutions...
-            #if (SMARTCARD_MTP_LOGIN_LENGTH/8) < C_NODE_PWD_SIZE
+            #if (SMARTCARD_MTP_LOGIN_LENGTH/8) > NODE_CHILD_SIZE_OF_LOGIN
                 #error "Reused loginString buffer isn't big enough"
             #endif
 
             // See if the lock / unlock feature is enabled, type password if so
-            if ((setCurrentContext((uint8_t*)"_unlock_", SERVICE_CRED_TYPE) == RETURN_OK) && (getMooltipassParameterInEeprom(LOCK_UNLOCK_FEATURE_PARAM) != FALSE))
+            if ((setCurrentContext((uint8_t*)"_unlock_", SERVICE_CRED_TYPE) == RETURN_OK) && ((getMooltipassParameterInEeprom(LOCK_UNLOCK_FEATURE_PARAM) & LF_EN_MASK) != 0))
             {
                 mp_lock_unlock_shortcuts = TRUE;
 
                 // Set the first char to 0 as getLoginForContext uses it to know if there's a suggested login
                 loginString[0] = 0;
-                if ((getLoginForContext((char*)loginString) == RETURN_OK) && (getPasswordForContext((char*)loginString) == RETURN_OK))
+                if (getLoginForContext((char*)loginString) == RETURN_OK)
                 {
-                    // If everything went well, type the password and press enter
-                    loginString[C_NODE_PWD_SIZE-1] = 0;
-                    usbKeybPutStr((char*)loginString);
-                    usbKeyboardPress(KEY_RETURN, 0);
+                    /* We fetched the login (user approved), enter "enter" if feature enabled */
+                    if ((getMooltipassParameterInEeprom(LOCK_UNLOCK_FEATURE_PARAM) & LF_ENT_KEY_MASK) != 0)
+                    {
+                        usbKeyboardPress(KEY_RETURN, 0);
+                    }
+
+                    /* If enabled, enter login: works because it takes less than 1s */
+                    if ((getMooltipassParameterInEeprom(LOCK_UNLOCK_FEATURE_PARAM) & LF_LOGIN_MASK) != 0)
+                    {
+                        loginString[NODE_CHILD_SIZE_OF_LOGIN-1] = 0;
+                        usbKeybPutStr((char*)loginString);
+                    }
+
+                    /* Todo: implement back functionality? */
+
+                    /* Fetch the password */
+                    if (getPasswordForContext((char*)loginString) == RETURN_OK)
+                    {
+                        // If everything went well, type the password and press enter
+                        loginString[C_NODE_PWD_SIZE-1] = 0;
+                        usbKeybPutStr((char*)loginString);
+                        usbKeyboardPress(KEY_RETURN, 0);
+                    }
                 }
             }
             
@@ -357,9 +376,8 @@ RET_TYPE cloneSmartCardProcess(volatile uint16_t* pincode)
     writeApplicationZone1(temp_az1);
     writeApplicationZone2(temp_az2);
     
-    // Write random bytes in the code protected zone
-    fillArrayWithRandomBytes(temp_az1, SMARTCARD_CPZ_LENGTH);
-    writeCodeProtectedZone(temp_az1);
+    // 14/10/2016: we now copy the CPZ into the cloned card as well, as there's no need to uniquely identify the cards (and the solution doesn't handle that case)
+    writeCodeProtectedZone(temp_cpz);
     
     // Add smart card to our database
     writeSmartCardCPZForUserId(temp_az1, temp_ctr_val, temp_user_id);

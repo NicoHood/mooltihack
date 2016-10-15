@@ -970,8 +970,12 @@ void usbProcessIncoming(uint8_t caller_id)
                         // TODO: implement sec check !
 
                         // Allow bundle update if password is not set
-                        if ((boot_pwd_set_val != BOOTLOADER_PWDOK_KEY) || ((guiAskForConfirmation(2, &temp_conf_text) == RETURN_OK) && (TRUE == TRUE)))
+                        if ((boot_pwd_set_val != BOOTLOADER_PWDOK_KEY) || ((guiAskForConfirmation(2, &temp_conf_text) == RETURN_OK) && (guiAskForConfirmation(1, (confirmationText_t*)readStoredStringToBuffer(ID_STRING_DO_NOT_UNPLUG)) == RETURN_OK) && (TRUE == TRUE)))
                         {
+                            /* Erase screen */
+                            miniOledClearFrameBuffer();
+                            miniOledFlushEntireBufferToDisplay();
+
                             /* Approve bundle upload request */
                             plugin_return_value = PLUGIN_BYTE_OK;
                             mediaFlashImportApproved = TRUE;
@@ -986,7 +990,10 @@ void usbProcessIncoming(uint8_t caller_id)
                                 activateTimer(TIMER_REBOOT, BUNDLE_UPLOAD_TIMEOUT);
                             }
                         }
-                        guiGetBackToCurrentScreen();
+                        else
+                        {
+                            guiGetBackToCurrentScreen();
+                        }
                     }
                     else
                     {
@@ -1447,6 +1454,22 @@ void usbProcessIncoming(uint8_t caller_id)
         {
             // Second parameter, which is returned by the code by default, is the number of free user slots
             findAvailableUserId(msg->body.data, &plugin_return_value);
+            break;
+        }
+
+        // lock device if unlocked
+        case CMD_LOCK_DEVICE:
+        {
+            if (getSmartCardInsertedUnlocked() == TRUE)
+            {
+                guiSetCurrentScreen(SCREEN_DEFAULT_INSERTED_LCK);
+                guiGetBackToCurrentScreen();
+                handleSmartcardRemoved();
+            }
+            else
+            {
+                plugin_return_value = PLUGIN_BYTE_ERROR;
+            }
             break;
         }
 

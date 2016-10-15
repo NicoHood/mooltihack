@@ -153,6 +153,12 @@ def main():
 			
 		if sys.argv[1] == "test_please_retry":
 			mooltipass_device.testPleaseRetry()
+			
+		if sys.argv[1] == "get_card_cpz":
+			mooltipass_device.getCardCpz()
+			
+		if sys.argv[1] == "lock":
+			mooltipass_device.lock()
 		
 		
 	#mooltipass_device.sendCustomPacket()
