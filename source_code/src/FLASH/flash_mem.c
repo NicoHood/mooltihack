@@ -342,7 +342,7 @@ flash_ret_t flash_write_into_buffer(uint16_t offset, uint8_t* data, size_t size)
         return FLASH_RET_ERR_INPUT_PARAM;
     }
 
-    return flash_transfer_opcode_data(0, offset, data, size, FLASH_OPCODE_WRITE_INTO_BUF2, false);
+    return flash_transfer_opcode_data(0, offset, data, size, FLASH_OPCODE_WRITE_INTO_BUF2, true);
 }
 
 /**

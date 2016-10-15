@@ -228,7 +228,6 @@ Note:  The flash_test.c file does use oled and usb libs of the Mooltipass howeve
   - "flash" prefix for every library function/definition
   - Low level functions use their own SRAM buffer
   - No input buffer gets destroyed anymore
-  - old flashWriteBuffer() does not wait a ready state anymore
   - erase/program error bit check
   - error code enums
   - uses low power read now
