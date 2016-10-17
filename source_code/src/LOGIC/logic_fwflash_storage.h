@@ -170,9 +170,9 @@
     #define BITMAP_PIN_SLOT2        7
     #define BITMAP_PIN_SLOT3        8
     #define BITMAP_PIN_SLOT4        9
-    #define BITMAP_SCROLL_WHEEL     10   
+    #define BITMAP_SCROLL_WHEEL     10
     #define BITMAP_LOGIN_LPANE      12
-    #define BITMAP_ZZZ              13 
+    #define BITMAP_ZZZ              13
     #define BITMAP_LOCK_FULL        40
     #define BITMAP_LOCK_EMPTY       41
     #define BITMAP_PAC_FULL         42
@@ -247,7 +247,7 @@
     #define ID_STRING_YOUR_USERNAME     41
     #define ID_STRING_SHOW_LOGINQ       42
     #define ID_STRING_SHOW_PASSQ        43
-    #define ID_STRING_TEST_FLASH_PB     44    
+    #define ID_STRING_TEST_FLASH_PB     44
     #define ID_STRING_TEST_CARD_INS     45
     #define ID_STRING_TEST_CARD_PB      46
     #define ID_STRING_TEST_NOK          47
@@ -335,7 +335,7 @@
 #endif
 
 // Keyboard LUTs
-// Changes: 
+// Changes:
 // - ID_KEYB_MX_MX_LUT removed (same as ID_KEYB_ES_AR_LUT)
 // - ID_KEYB_SW_SW_LUT removed (same as ID_KEYB_FI_FI_LUT)
 // - ID_KEYB_DE_AU_LUT removed (same as ID_KEYB_DE_DE_LUT)

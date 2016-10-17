@@ -63,7 +63,7 @@ Wheel pressed~~
 Scroll To 'z'
 DON'T APPROVE THIS!
 Send Password For:
-Select Credential: 
+Select Credential:
 !!!Inputs PB!!!~~
 LED1,
 LED2,

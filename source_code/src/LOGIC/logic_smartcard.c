@@ -52,7 +52,7 @@ RET_TYPE handleSmartcardInserted(void)
     RET_TYPE detection_result = cardDetectedRoutine();
     // Return fail by default
     RET_TYPE return_value = RETURN_NOK;
-    
+
     if ((detection_result == RETURN_MOOLTIPASS_PB) || (detection_result == RETURN_MOOLTIPASS_INVALID))
     {
         // Either it is not a card or our Manufacturer Test Zone write/read test failed
@@ -81,7 +81,7 @@ RET_TYPE handleSmartcardInserted(void)
         else if (guiAskForConfirmation(1, (confirmationText_t*)readStoredStringToBuffer(ID_STRING_NEWMP_USER)) == RETURN_OK)
         {
             volatile uint16_t pin_code;
-            
+
             // Create a new user with his new smart card
             if ((guiAskForNewPin(&pin_code, ID_STRING_PIN_NEW_CARD) == RETURN_NEW_PIN_OK) && (addNewUserAndNewSmartCard(&pin_code) == RETURN_OK))
             {
@@ -98,7 +98,7 @@ RET_TYPE handleSmartcardInserted(void)
             pin_code = 0x0000;
         }
 		else
-		{			
+		{
 			guiSetCurrentScreen(next_screen);
 			guiGetBackToCurrentScreen();
 			return return_value;
@@ -109,12 +109,12 @@ RET_TYPE handleSmartcardInserted(void)
     {
         // Call valid card detection function
         uint8_t temp_return = validCardDetectedFunction(0, TRUE);
-        
+
         // This a valid user smart card, we call a dedicated function for the user to unlock the card
         if (temp_return == RETURN_VCARD_OK)
         {
             uint8_t loginString[NODE_CHILD_SIZE_OF_LOGIN];
-            
+
             // As we do buffer reuse, double check it here for possible evolutions...
             #if (SMARTCARD_MTP_LOGIN_LENGTH/8) > NODE_CHILD_SIZE_OF_LOGIN
                 #error "Reused loginString buffer isn't big enough"
@@ -154,7 +154,7 @@ RET_TYPE handleSmartcardInserted(void)
                     }
                 }
             }
-            
+
             // Card successfully unlocked
             readMooltipassWebsiteLogin(loginString);
             guiDisplaySmartcardUnlockedScreen(loginString);
@@ -176,7 +176,7 @@ RET_TYPE handleSmartcardInserted(void)
         }
         printSmartCardInfo();
     }
-    
+
     userViewDelay();
     guiSetCurrentScreen(next_screen);
     guiGetBackToCurrentScreen();
@@ -194,7 +194,7 @@ void handleSmartcardRemoved(void)
     // Remove power and flags
     removeFunctionSMC();
     clearSmartCardInsertedUnlocked();
-    
+
     // Clear encryption context
     memset((void*)temp_buffer, 0, AES_KEY_LENGTH/8);
     memset((void*)temp_ctr_val, 0, AES256_CTR_LENGTH);
@@ -207,29 +207,29 @@ void handleSmartcardRemoved(void)
 */
 RET_TYPE removeCardAndReAuthUser(void)
 {
-    uint8_t temp_cpz1[SMARTCARD_CPZ_LENGTH];    
+    uint8_t temp_cpz1[SMARTCARD_CPZ_LENGTH];
     uint8_t temp_cpz2[SMARTCARD_CPZ_LENGTH];
-    
+
     // Get current CPZ
     readCodeProtectedZone(temp_cpz1);
-    
+
     // Disconnect smartcard
     handleSmartcardRemoved();
-    
+
     // Wait a few ms
     timerBased130MsDelay();
-    
+
     // Launch Unlocking process
     if ((cardDetectedRoutine() == RETURN_MOOLTIPASS_USER) && (validCardDetectedFunction(0, FALSE) == RETURN_VCARD_OK))
     {
         // Read other CPZ
         readCodeProtectedZone(temp_cpz2);
-        
+
         // Check that they're actually the sames
         if (memcmp(temp_cpz1, temp_cpz2, SMARTCARD_CPZ_LENGTH) == 0)
         {
             return RETURN_OK;
-        } 
+        }
         else
         {
             return RETURN_NOK;
@@ -255,16 +255,16 @@ RET_TYPE validCardDetectedFunction(uint16_t* suggested_pin, uint8_t hash_allow_f
     uint8_t temp_ctr_val[AES256_CTR_LENGTH];
     uint8_t temp_buffer[AES_KEY_LENGTH/8];
     uint8_t temp_user_id;
-    
+
     // Debug: output the number of known cards and users
     #ifdef GENERAL_LOGIC_OUTPUT_USB
         usbPrintf_P(PSTR("%d cards\r\n"), getNumberOfKnownCards());
         usbPrintf_P(PSTR("%d users\r\n"), getNumberOfKnownUsers());
     #endif
-    
+
     // Read code protected zone to see if know this particular card
     readCodeProtectedZone(temp_buffer);
-    
+
     // See if we know the card and if so fetch the user id & CTR nonce
     if (getUserIdFromSmartCardCPZ(temp_buffer, temp_ctr_val, &temp_user_id) == RETURN_OK)
     {
@@ -285,13 +285,13 @@ RET_TYPE validCardDetectedFunction(uint16_t* suggested_pin, uint8_t hash_allow_f
             computeAndDisplayBlockSizeEncryptionResult(plateform_aes_key, temp_ctr_val, ID_STRING_HASH1);
         }
         #endif
-        
+
         // Ask the user to enter his PIN and check it
         if (((suggested_pin != 0) && (mooltipassDetectedRoutine(suggested_pin) == RETURN_MOOLTIPASS_4_TRIES_LEFT)) || ((suggested_pin == 0) && (guiCardUnlockingProcess() == RETURN_OK)))
         {
             // Unlocking succeeded
             readAES256BitsKey(temp_buffer);
-            
+
             // Display AESenc(AESkey) if desired: as this check is made to make sure the device isn't compromised, it is OK to display it.
             #ifdef MINI_VERSION
             if ((getMooltipassParameterInEeprom(HASH_DISPLAY_FEATURE_PARAM) != FALSE) && (hash_allow_flag != FALSE))
@@ -308,7 +308,7 @@ RET_TYPE validCardDetectedFunction(uint16_t* suggested_pin, uint8_t hash_allow_f
             // Init user flash context and encryption handling, set smartcard unlocked flag
             initUserFlashContext(temp_user_id);
             initEncryptionHandling(temp_buffer, temp_ctr_val);
-            setSmartCardInsertedUnlocked();            
+            setSmartCardInsertedUnlocked();
             return RETURN_VCARD_OK;
         }
         else
@@ -318,7 +318,7 @@ RET_TYPE validCardDetectedFunction(uint16_t* suggested_pin, uint8_t hash_allow_f
         }
     }
     else
-    {        
+    {
         // Unknown card
         return RETURN_VCARD_UNKNOWN;
     }
@@ -333,71 +333,71 @@ RET_TYPE cloneSmartCardProcess(volatile uint16_t* pincode)
 {
     // Temp buffers to store AZ1 & AZ2
     uint8_t temp_az1[SMARTCARD_AZ_BIT_LENGTH/8];
-    uint8_t temp_az2[SMARTCARD_AZ_BIT_LENGTH/8];    
+    uint8_t temp_az2[SMARTCARD_AZ_BIT_LENGTH/8];
     uint8_t temp_ctr_val[AES256_CTR_LENGTH];
     uint8_t temp_cpz[SMARTCARD_CPZ_LENGTH];
     uint8_t temp_user_id;
-    
+
     // Check that the current smart card is unlocked
     if (getSmartCardInsertedUnlocked() != TRUE)
     {
         return RETURN_NOK;
     }
-    
+
     // Read code protected zone
     readCodeProtectedZone(temp_cpz);
-    
+
     // Retrieve nonce & user id
     if (getUserIdFromSmartCardCPZ(temp_cpz, temp_ctr_val, &temp_user_id) != RETURN_OK)
     {
         return RETURN_NOK;
     }
-    
+
     // Extract current AZ1 & AZ2
     readApplicationZone1(temp_az1);
     readApplicationZone2(temp_az2);
-    
+
     // Inform the user to remove his smart card
     guiDisplayInformationOnScreen(ID_STRING_REMOVE_CARD);
-    
+
     // Wait for the user to remove his smart card
     while (isCardPlugged() != RETURN_JRELEASED);
-    
+
     // Inform the user to insert a blank smart card
     guiDisplayInformationOnScreen(ID_STRING_INSERT_NCARD);
-    
+
     // Wait for the user to insert a blank smart card
     while (isCardPlugged() != RETURN_JDETECT);
     guiDisplayProcessingScreen();
-    
+
     // Check that we have a blank card
     if (cardDetectedRoutine() != RETURN_MOOLTIPASS_BLANK)
     {
         return RETURN_NOK;
     }
-    
+
     // Erase AZ1 & AZ2 in the new card
     eraseApplicationZone1NZone2SMC(FALSE);
     eraseApplicationZone1NZone2SMC(TRUE);
-    
+
     // Write AZ1 & AZ2
     writeApplicationZone1(temp_az1);
     writeApplicationZone2(temp_az2);
-    
+
     // 14/10/2016: we now copy the CPZ into the cloned card as well, as there's no need to uniquely identify the cards (and the solution doesn't handle that case)
     writeCodeProtectedZone(temp_cpz);
-    
+
     // Add smart card to our database
     writeSmartCardCPZForUserId(temp_az1, temp_ctr_val, temp_user_id);
-    
+
     // Write new password
     writeSecurityCode(pincode);
-    
+
     // Set the smart card inserted unlocked flag, cleared by interrupt
     setSmartCardInsertedUnlocked();
-    
+
     // Inform the user that it is done
     guiDisplayInformationOnScreen(ID_STRING_DONE);
-    
+
     return RETURN_OK;
 }
