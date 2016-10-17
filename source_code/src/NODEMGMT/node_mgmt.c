@@ -943,34 +943,36 @@ void getPreviousNextFirstLetterForGivenLetter(char c, char* array, uint16_t* par
     parent_addresses[2] = NODE_ADDR_NULL;
 
     // Store the provided char as first letter for the current credential
-    if ((c >= 'a') && (c <= 'z'))
-    {
-        array[1] = c - 'a' + 'A';
-    }
-    else
-    {
-        array[1] = c;
-    }
+    array[1] = c;
 
-    // Loop through our LUT
-    for (uint8_t i = 0; i < sizeof(currentNodeMgmtHandle.servicesLut)/sizeof(currentNodeMgmtHandle.servicesLut[0]); i++)
+    // Go through all nodes and find the previous and following chracter nodes
+    pNode node;
+    uint16_t nodeAddress = currentNodeMgmtHandle.firstParentNode;
+    while(nodeAddress)
     {
-        if (currentNodeMgmtHandle.servicesLut[i] != NODE_ADDR_NULL)
+        // Get next node
+        readParentNode(&node, nodeAddress);
+
+        // Get first character of node
+        char currentChar = node.service[0];
+
+        // Check if letter is before the target character
+        if((currentChar < c) && array[0] != currentChar)
         {
-            if (((i + 'a') < c) && (array[0] != (i + 'A')))
-            {
-                // First letter before the current one, only run once for each letter
-                array[0] = i + 'A';
-                parent_addresses[0] = currentNodeMgmtHandle.servicesLut[i];
-            }
-            if ((i + 'a') > c)
-            {
-                // First letter after the current one
-                array[2] = i + 'A';
-                parent_addresses[2] = currentNodeMgmtHandle.servicesLut[i];
-                return;
-            }
+            array[0] = currentChar;
+            parent_addresses[0] = nodeAddress;
         }
+
+        // Check if we found a character after the target character
+        if(currentChar > c)
+        {
+            array[2] = currentChar;
+            parent_addresses[2] = nodeAddress;
+            break;
+        }
+
+        // Get next address
+        nodeAddress = node.nextParentAddress;
     }
 }
 
