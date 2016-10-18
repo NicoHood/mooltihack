@@ -53,34 +53,34 @@ parser.add_option('-r', '--reverse', help='set to inverse pixel data', action="s
 
 if options.input == None:
 	parser.error('input option is required')
-	
+
 def main():
-		
+
 	# Open image and convert it to monochrome
 	image = Image.open(options.input)
-	image = image.convert(mode="RGB", colors=1)	
-	
+	image = image.convert(mode="RGB", colors=1)
+
 	# Get image specs
 	img_format = image.format
 	img_size = image.size
 	img_mode = image.mode
 	print "Format:", img_format, "size:", img_size, "mode:", img_mode
-	
+
 	# Check size
 	if img_size[0] > 128 or img_size[1] > 32:
 		print "Wrong dimensions or format!"
 		sys.exit(0)
-		
-	# Compute size	
+
+	# Compute size
 	dataSize = img_size[0] * ((img_size[1]+7) / 8)
 	print "Total data size:", dataSize, "bytes"
-		
+
 	# Turn image left 90 degrees
 	image_rot = image.transpose(Image.ROTATE_270)
 	#image_rot.save("lapin.jpg", "JPEG")
 	#print image_rot.size[0]
 	#print image_rot.size[1]
-	
+
 	# Process the pixels
 	pixel_data = 0
 	bitCount = 7
@@ -109,9 +109,9 @@ def main():
 					bitCount = 7
 			if bitCount != 7:
 				bitstream.append(pixel_data)
-			
+
 	#print bitstream
-	
+
 	# Open file to write
 	fd = open(options.input.split('.')[0]+".img", 'wb');
 
@@ -120,7 +120,7 @@ def main():
 	# Write data
 	fd.write(pack('<{}B'.format(len(bitstream)), *bitstream))
 	fd.close()
-	
+
 	print "File written"
 
 if __name__ == "__main__":
