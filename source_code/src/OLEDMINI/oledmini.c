@@ -657,7 +657,7 @@ void miniOledBitmapDrawRaw(int8_t x, uint8_t y, bitstream_mini_t* bs)
     uint8_t data_rbitshift = 7 - (end_ypixel & 0x07);
     uint8_t data_lbitshift = (8 - data_rbitshift) & 0x07;
     uint8_t cur_pixels = 0, prev_pixels = 0;
-    uint8_t end_x = x + bs->width - 1;
+    uint8_t end_x = x + bs->width;
     uint8_t start_x;
 
     // Check if x is < 0
@@ -690,11 +690,12 @@ void miniOledBitmapDrawRaw(int8_t x, uint8_t y, bitstream_mini_t* bs)
     uint8_t rbitmask[] = {0x00, 0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE};
     //uint8_t lbitmask[] = {0xFF, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F};
 
-    for (uint8_t x = start_x; (x <= end_x) && (x < SSD1305_OLED_WIDTH); x++)
+    for (uint8_t x = start_x; (x < end_x) && (x < SSD1305_OLED_WIDTH); x++)
     {
         int16_t buffer_shift = (((uint16_t)end_page % SSD1305_OLED_BUFFER_PAGE_HEIGHT) << SSD1305_WIDTH_BIT_SHIFT);
         uint8_t pixels_to_be_displayed = bs->height;
-        for (int8_t page = end_page; page >= start_page; page--)
+        uint8_t page = end_page;
+        while(true)
         {
             if (page == end_page)
             {
@@ -756,6 +757,14 @@ void miniOledBitmapDrawRaw(int8_t x, uint8_t y, bitstream_mini_t* bs)
             {
                 buffer_shift = ((uint16_t)(SSD1305_OLED_BUFFER_PAGE_HEIGHT-1) << SSD1305_WIDTH_BIT_SHIFT);
             }
+
+            // Last page written, return now
+            if (page == start_page)
+            {
+                break;
+            }
+
+            page--;
         }
     }
 }
