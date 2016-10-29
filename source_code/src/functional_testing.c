@@ -20,7 +20,7 @@
 /*! \file   functional_testing.c
  *  \brief  Functional testing functions
  *  Copyright [2016] [Mathieu Stephan]
- */ 
+ */
 #include <avr/eeprom.h>
 #include <avr/io.h>
 #include "smart_card_higher_level_functions.h"
@@ -48,35 +48,35 @@ RET_TYPE electricalJumpToBootloaderCondition(void)
     #if defined(HARDWARE_OLIVIER_V1)
         /* Disable JTAG to get access to the pins */
         disableJTAG();
-        
+
         /* Init SMC port */
         initPortSMC();
-        
+
         /* Delay for detection */
         smallForLoopBasedDelay();
-        
+
         if (!(PIN_SC_DET & (1 << PORTID_SC_DET)))
         {
             uint16_t tempuint16;
-            
+
             /* What follows is a copy from firstDetectFunctionSMC() */
             /* Enable power to the card */
             PORT_SC_POW &= ~(1 << PORTID_SC_POW);
-            
+
             /* Default state: PGM to 0 and RST to 1 */
             PORT_SC_PGM &= ~(1 << PORTID_SC_PGM);
             DDR_SC_PGM |= (1 << PORTID_SC_PGM);
             PORT_SC_RST |= (1 << PORTID_SC_RST);
             DDR_SC_RST |= (1 << PORTID_SC_RST);
-            
+
             /* Activate SPI port */
             PORT_SPI_NATIVE &= ~((1 << SCK_SPI_NATIVE) | (1 << MOSI_SPI_NATIVE));
             DDRB |= (1 << SCK_SPI_NATIVE) | (1 << MOSI_SPI_NATIVE);
             setSPIModeSMC();
-            
+
             /* Let the card come online */
             smallForLoopBasedDelay();
-            
+
             /* Check smart card FZ */
             readFabricationZone((uint8_t*)&tempuint16);
             if ((swap16(tempuint16)) != SMARTCARD_FABRICATION_ZONE)
@@ -97,19 +97,19 @@ RET_TYPE electricalJumpToBootloaderCondition(void)
     #elif defined(MINI_VERSION)
         /* Disable JTAG to get access to the pins */
         disableJTAG();
-        
+
         /* Pressing wheel starts the bootloader */
         DDR_CLICK &= ~(1 << PORTID_CLICK);
         PORT_CLICK |= (1 << PORTID_CLICK);
-        
+
         /* Small delay for detection */
         smallForLoopBasedDelay();
-        
+
         /* Check if low */
         if (!(PIN_CLICK & (1 << PORTID_CLICK)))
         {
             return TRUE;
-        }  
+        }
         else
         {
             return FALSE;
@@ -136,7 +136,7 @@ void mooltipassStandardElectricalTest(uint8_t fuse_ok)
 
         // Set PORTD as output, leave PORTID_OLED_SS high
         DDRD |= 0xFF; PORTD |= 0xFF;
-        
+
         // All other pins are input by default, run our test
         for (uint8_t i = 0; i < 4; i++)
         {
@@ -153,10 +153,10 @@ void mooltipassStandardElectricalTest(uint8_t fuse_ok)
                 test_result = FALSE;
             }
         }
-        
+
         // PB6 as test result output
         DDRB |= (1 << 6);
-        
+
         // If test successful, light green LED
         if ((test_result == TRUE) && (fuse_ok == TRUE))
         {
@@ -181,17 +181,17 @@ void mooltipassMiniFunctionalTest(uint8_t flash_init_result, uint8_t fuse_ok, ui
 {
     // Byte value to which USER_PARAM_INIT_KEY_PARAM should be set to go to the next customization step
     uint8_t correct_param_init_key_val = 0xBB;
-    uint8_t test_result_ok = TRUE;        
+    uint8_t test_result_ok = TRUE;
     char temp_string[] = {'a', 0};
     RET_TYPE temp_rettype;
-        
+
     // Wait for USB host to upload bundle, which then sets USER_PARAM_INIT_KEY_PARAM
     while(getMooltipassParameterInEeprom(USER_PARAM_INIT_KEY_PARAM) != correct_param_init_key_val)
     {
         usbProcessIncoming(USB_CALLER_MAIN);
     }
     correct_param_init_key_val++;
-        
+
     // Bundle uploaded, start the screen
     miniOledAllowTextWritingYIncrement();
     miniOledFlushWrittenTextToDisplay();
@@ -215,14 +215,14 @@ void mooltipassMiniFunctionalTest(uint8_t flash_init_result, uint8_t fuse_ok, ui
         correct_param_init_key_val++;
     }
     #endif
-        
+
     // Check flash initialization
     if (flash_init_result != RETURN_OK)
     {
         guiDisplayRawString(ID_STRING_TEST_FLASH_PB);
         test_result_ok = FALSE;
     }
-        
+
     // Check fuse setting
     if (fuse_ok != TRUE)
     {
@@ -236,7 +236,7 @@ void mooltipassMiniFunctionalTest(uint8_t flash_init_result, uint8_t fuse_ok, ui
         guiDisplayRawString(ID_STRING_INPUT_PB);
         test_result_ok = FALSE;
     }
-        
+
     // Check that card is removed
     if (isSmartCardAbsent() == RETURN_NOK)
     {
@@ -244,20 +244,20 @@ void mooltipassMiniFunctionalTest(uint8_t flash_init_result, uint8_t fuse_ok, ui
         while(isSmartCardAbsent() == RETURN_NOK);
         miniOledResetXY();oledClear();
     }
-    
+
     // Test description, press wheel
     guiDisplayRawString(ID_STRING_FUNC_TEST);
-    
+
     // Wait for wheel press
     miniWheelClearDetections();
     while(isWheelClicked() != RETURN_JDETECT);
     guiDisplayRawString(ID_STRING_FUNC_WHEEL);
-    
+
     // Test description
     oledClear();
     miniOledResetXY();
     guiDisplayRawString(ID_STRING_FUNC_TEST_SCROLL);
-    
+
     // Wait for scroll
     while(temp_string[0] != 'z')
     {
@@ -269,7 +269,7 @@ void mooltipassMiniFunctionalTest(uint8_t flash_init_result, uint8_t fuse_ok, ui
     oledClear();
     miniOledResetXY();
     guiDisplayRawString(ID_STRING_FUNC_TEST_SCROLL2);
-    
+
     // Wait for scroll
     while(temp_string[0] != 'a')
     {
@@ -277,33 +277,33 @@ void mooltipassMiniFunctionalTest(uint8_t flash_init_result, uint8_t fuse_ok, ui
         oledPutstrXY(70,15,0,temp_string);
         oledFillXY(70,15,15,15,FALSE);
     }
-        
+
     // Insert card
     oledClear();miniOledResetXY();
     guiDisplayRawString(ID_STRING_TEST_CARD_INS);
     while(isCardPlugged() != RETURN_JDETECT);
     temp_rettype = cardDetectedRoutine();
-        
+
     // Check card
     if (!((temp_rettype == RETURN_MOOLTIPASS_BLANK) || (temp_rettype == RETURN_MOOLTIPASS_USER)))
     {
         guiDisplayRawString(ID_STRING_TEST_CARD_PB);
         test_result_ok = FALSE;
     }
-        
+
     // Display result
     uint8_t script_return = RETURN_OK;
     if (test_result_ok == TRUE)
     {
         // Inform script of success
-        usbSendMessage(CMD_FUNCTIONAL_TEST_RES, 1, &script_return);            
-            
+        usbSendMessage(CMD_FUNCTIONAL_TEST_RES, 1, &script_return);
+
         // Wait for password to be set
         while(eeprom_read_byte((uint8_t*)EEP_BOOT_PWD_SET) != BOOTLOADER_PWDOK_KEY)
         {
             usbProcessIncoming(USB_CALLER_MAIN);
         }
-        
+
         // Functional test passed, remove fboot flag
         eeprom_write_byte((uint8_t*)EEP_MASS_PROD_FBOOT_BOOL_ADDR, 0);
 
@@ -315,10 +315,10 @@ void mooltipassMiniFunctionalTest(uint8_t flash_init_result, uint8_t fuse_ok, ui
     {
         // Set correct bool
         script_return = RETURN_NOK;
-            
+
         // Display test result
         guiDisplayRawString(ID_STRING_TEST_NOK);
-            
+
         // Inform script of failure
         usbSendMessage(CMD_FUNCTIONAL_TEST_RES, 1, &script_return);
     }
@@ -346,83 +346,83 @@ void mooltipassStandardFunctionalTest(uint16_t current_bootkey_val, uint8_t flas
     {
         uint8_t test_result_ok = TRUE;
         RET_TYPE temp_rettype;
-        
+
         // Wait for USB host to upload bundle, which then sets USER_PARAM_INIT_KEY_PARAM
         while(getMooltipassParameterInEeprom(USER_PARAM_INIT_KEY_PARAM) != 0x94)
         {
             usbProcessIncoming(USB_CALLER_MAIN);
         }
-        
+
         // Bundle uploaded, start the screen
         stockOledBegin(FONT_DEFAULT);
         oledWriteActiveBuffer();
         oledSetXY(0,0);
-        
+
         // LEDs ON, to check
         setPwmDc(MAX_PWM_VAL);
         touchDetectionRoutine(0);
         guiDisplayRawString(ID_STRING_TEST_LEDS_CH);
-        
+
         // Check flash init
         if (flash_init_result != RETURN_OK)
         {
             guiDisplayRawString(ID_STRING_TEST_FLASH_PB);
             test_result_ok = FALSE;
         }
-        
+
         // Check touch init
         if (touch_init_result != RETURN_OK)
         {
             guiDisplayRawString(ID_STRING_TEST_TOUCH_PB);
             test_result_ok = FALSE;
         }
-        
+
         // Check fuse setting
         if (fuse_ok != TRUE)
         {
             test_result_ok = FALSE;
             guiDisplayRawString(ID_STRING_FUSE_PB);
         }
-        
+
         // Touch instructions
         guiDisplayRawString(ID_STRING_TEST_INST_TCH);
-        
+
         // Check proximity sensor
         while(!(touchDetectionRoutine(0) & RETURN_PROX_DETECTION));
         guiDisplayRawString(ID_STRING_TEST_DET);
         activateGuardKey();
-        
+
         // Check left
         while(!(touchDetectionRoutine(0) & RETURN_LEFT_PRESSED));
         guiDisplayRawString(ID_STRING_TEST_LEFT);
-        
+
         // Check wheel
         while(!(touchDetectionRoutine(0) & RETURN_WHEEL_PRESSED));
         guiDisplayRawString(ID_STRING_TEST_WHEEL);
-        
+
         // Check right
         while(!(touchDetectionRoutine(0) & RETURN_RIGHT_PRESSED));
         guiDisplayRawString(ID_STRING_TEST_RIGHT);
-        
+
         // Insert card
         guiDisplayRawString(ID_STRING_TEST_CARD_INS);
         while(isCardPlugged() != RETURN_JDETECT);
         temp_rettype = cardDetectedRoutine();
-        
+
         // Check card
         if (!((temp_rettype == RETURN_MOOLTIPASS_BLANK) || (temp_rettype == RETURN_MOOLTIPASS_USER)))
         {
             guiDisplayRawString(ID_STRING_TEST_CARD_PB);
             test_result_ok = FALSE;
         }
-        
+
         // Display result
         uint8_t script_return = RETURN_OK;
         if (test_result_ok == TRUE)
         {
             // Inform script of success
             usbSendMessage(CMD_FUNCTIONAL_TEST_RES, 1, &script_return);
-            
+
             #if !defined(PREPRODUCTION_KICKSTARTER_SETUP)
             // Wait for password to be set
             while(eeprom_read_byte((uint8_t*)EEP_BOOT_PWD_SET) != BOOTLOADER_PWDOK_KEY)
@@ -435,10 +435,10 @@ void mooltipassStandardFunctionalTest(uint16_t current_bootkey_val, uint8_t flas
         {
             // Set correct bool
             script_return = RETURN_NOK;
-            
+
             // Display test result
             guiDisplayRawString(ID_STRING_TEST_NOK);
-            
+
             // Inform script of failure
             usbSendMessage(CMD_FUNCTIONAL_TEST_RES, 1, &script_return);
             while(1);
