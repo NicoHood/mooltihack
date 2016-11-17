@@ -1,4 +1,4 @@
-Mooltipass Project Repository
+Mooltihack Project Repository
 =============================
 <p align="center">
   <img src="https://raw.githubusercontent.com/limpkin/mooltipass/master/pictures/mini/prototypes/mini_alum_final_small_cropped.JPG" alt="Mooltipass first prototype"/>
